@@ -2,5 +2,46 @@
 name = "whisper-background-server"
 version = "0.1.0"
 edition = "2024"
+license = "Apache-2.0"
 
 [dependencies]
+whisper-rs = { version = "0.15.1", optional = true } # Optional to allow other whisper projects, but include by default
+tokio = { version = "1.47.1", features = ["full"] }
+serde = { version = "1.0.226", features = ["derive"] }
+serde_json = { version = "1.0.145" }
+log = { version = "0.4.28" }
+
+[features]
+default = ["whisper_rs"]
+
+# Whisper-rs features: https://docs.rs/crate/whisper-rs/latest/features
+whisper_rs = ["dep:whisper-rs"]
+coreml = ["whisper-rs/coreml"]
+cuda = ["whisper-rs/cuda"]
+hipblas = ["whisper-rs/hipblas"]
+intel-sycl = ["whisper-rs/intel-sycl"]
+log_backend = ["whisper-rs/log_backend"]
+metal = ["whisper-rs/metal"]
+openblas = ["whisper-rs/openblas"]
+openmp = ["whisper-rs/openmp"]
+raw-api = ["whisper-rs/raw-api"]
+test-with-tiny-model = ["whisper-rs/test-with-tiny-model"]
+tracing_backend = ["whisper-rs/tracing_backend"]
+vulkan = ["whisper-rs/vulkan"]
+
+[profile.dev]
+opt-level = 0
+debug = true
+strip = "none"
+debug-assertions = true
+overflow-checks = true
+panic = 'unwind'
+incremental = true
+codegen-units = 256
+
+[profile.release]
+opt-level = 3
+strip = "none"
+lto = true
+panic = 'unwind'
+codegen-units = 16
