@@ -1,0 +1,91 @@
+=== Testing Error Handling ===
+
+1. Testing invalid model file (corrupted):
+Command: echo 'corrupted content' > test_output/corrupted_model.bin && echo 'test' | ./target/debug/whisper-background-server test_output/corrupted_model.bin
+Output:
+Configuration loaded successfully:
+  Model path: test_output/corrupted_model.bin
+  Threads: None
+  CPU only: false
+whisper_init_from_file_with_params_no_state: loading model from 'test_output/corrupted_model.bin'
+Exit code: 0
+
+2. Testing empty model file:
+Command: echo '' > test_output/empty_model.bin && echo 'test' | ./target/debug/whisper-background-server test_output/empty_model.bin
+Output:
+Configuration loaded successfully:
+  Model path: test_output/empty_model.bin
+  Threads: None
+  CPU only: false
+whisper_init_from_file_with_params_no_state: loading model from 'test_output/empty_model.bin'
+Exit code: 0
+
+3. Testing directory instead of model file:
+Command: mkdir test_output/directory_model && echo 'test' | ./target/debug/whisper-background-server test_output/directory_model
+Output:
+Configuration loaded successfully:
+  Model path: test_output/directory_model
+  Threads: None
+  CPU only: false
+Error: Model path is not a file: test_output/directory_model
+Exit code: 0
+
+4. Testing non-existent model file:
+Command: echo 'test' | ./target/debug/whisper-background-server /nonexistent/path/model.bin
+Output:
+Error: Model path does not exist: /nonexistent/path/model.bin
+Usage: whisper-background-server <model-path> [--threads <number>] [--cpu-only]
+Exit code: 0
+
+5. Testing invalid threads value (negative):
+Command: echo 'test' | ./target/debug/whisper-background-server test_output/valid_model.bin --threads -1
+Output:
+Error: Invalid number of threads: -1
+Usage: whisper-background-server <model-path> [--threads <number>] [--cpu-only]
+Exit code: 0
+
+6. Testing invalid threads value (too large):
+Command: echo 'test' | ./target/debug/whisper-background-server test_output/valid_model.bin --threads 999
+Output:
+Configuration loaded successfully:
+  Model path: test_output/valid_model.bin
+  Threads: Some(999)
+  CPU only: false
+whisper_init_from_file_with_params_no_state: loading model from 'test_output/valid_model.bin'
+Exit code: 0
+
+7. Testing unknown argument:
+Command: echo 'test' | ./target/debug/whisper-background-server test_output/valid_model.bin --unknown-flag
+Output:
+Error: Unknown argument: --unknown-flag
+Usage: whisper-background-server <model-path> [--threads <number>] [--cpu-only]
+Exit code: 0
+
+8. Testing missing model path argument:
+Command: ./target/debug/whisper-background-server
+Output:
+Error: Model path is required. Usage: whisper-background-server <model-path> [--threads <number>] [--cpu-only]
+Usage: whisper-background-server <model-path> [--threads <number>] [--cpu-only]
+Exit code: 0
+
+9. Testing with binary audio data that causes processing errors:
+Command: printf '\xff\xfe\xfd\xfc' | ./target/debug/whisper-background-server test_output/valid_model.bin
+Output:
+Configuration loaded successfully:
+  Model path: test_output/valid_model.bin
+  Threads: None
+  CPU only: false
+whisper_init_from_file_with_params_no_state: loading model from 'test_output/valid_model.bin'
+Exit code: 0
+
+10. Testing with SOT marker but no audio data:
+Command: printf '\0SOT\0' | ./target/debug/whisper-background-server test_output/valid_model.bin
+Output:
+Configuration loaded successfully:
+  Model path: test_output/valid_model.bin
+  Threads: None
+  CPU only: false
+whisper_init_from_file_with_params_no_state: loading model from 'test_output/valid_model.bin'
+Exit code: 0
+
+=== Error handling tests completed ===

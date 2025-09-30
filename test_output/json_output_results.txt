@@ -1,0 +1,94 @@
+=== Testing JSON Output Formatting and Stderr/Stdout Separation ===
+
+1. Testing server info JSON output (should be on stdout):
+Command: echo 'test' | ./target/debug/whisper-background-server test_output/valid_model.bin
+Stdout (JSON server info):
+Configuration loaded successfully:
+  Model path: test_output/valid_model.bin
+  Threads: None
+  CPU only: false
+
+Stderr (logs):
+whisper_init_from_file_with_params_no_state: loading model from 'test_output/valid_model.bin'
+whisper_init_with_params_no_state: use gpu    = 1
+whisper_init_with_params_no_state: flash attn = 0
+whisper_init_with_params_no_state: gpu_device = 0
+whisper_init_with_params_no_state: dtw        = 0
+Exit code: 0
+
+2. Testing error JSON output (when transcription fails):
+Command: printf 'test\0SOT\0' | ./target/debug/whisper-background-server test_output/valid_model.bin
+Stdout (JSON error result):
+Configuration loaded successfully:
+  Model path: test_output/valid_model.bin
+  Threads: None
+  CPU only: false
+
+Stderr (logs):
+whisper_init_from_file_with_params_no_state: loading model from 'test_output/valid_model.bin'
+whisper_init_with_params_no_state: use gpu    = 1
+whisper_init_with_params_no_state: flash attn = 0
+whisper_init_with_params_no_state: gpu_device = 0
+whisper_init_with_params_no_state: dtw        = 0
+Exit code: 0
+
+3. Testing JSON output with threads configuration:
+Command: printf 'test\0SOT\0' | ./target/debug/whisper-background-server test_output/valid_model.bin --threads 2
+Stdout (JSON server info):
+Configuration loaded successfully:
+  Model path: test_output/valid_model.bin
+  Threads: Some(2)
+  CPU only: false
+
+Exit code: 0
+
+4. Testing JSON output with CPU-only configuration:
+Command: printf 'test\0SOT\0' | ./target/debug/whisper-background-server test_output/valid_model.bin --cpu-only
+Stdout (JSON server info):
+Configuration loaded successfully:
+  Model path: test_output/valid_model.bin
+  Threads: None
+  CPU only: true
+
+Exit code: 0
+
+5. Testing JSON structure validation:
+Command: echo 'test' | ./target/debug/whisper-background-server test_output/valid_model.bin | python3 -c 'import sys, json; json.load(sys.stdin); print("JSON is valid")'
+Output:
+whisper_init_from_file_with_params_no_state: loading model from 'test_output/valid_model.bin'
+whisper_init_with_params_no_state: use gpu    = 1
+whisper_init_with_params_no_state: flash attn = 0
+whisper_init_with_params_no_state: gpu_device = 0
+whisper_init_with_params_no_state: dtw        = 0
+whisper_init_with_params_no_state: devices    = 2
+whisper_init_with_params_no_state: backends   = 2
+whisper_model_load: loading model
+whisper_model_load: invalid model data (bad magic)
+whisper_init_with_params_no_state: failed to load model
+Error: Failed to load model: Failed to create a new whisper context.
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+    import sys, json; json.load(sys.stdin); print("JSON is valid")
+                      ~~~~~~~~~^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.13/3.13.7/Frameworks/Python.framework/Versions/3.13/lib/python3.13/json/__init__.py", line 293, in load
+    return loads(fp.read(),
+        cls=cls, object_hook=object_hook,
+        parse_float=parse_float, parse_int=parse_int,
+        parse_constant=parse_constant, object_pairs_hook=object_pairs_hook, **kw)
+  File "/opt/homebrew/Cellar/python@3.13/3.13.7/Frameworks/Python.framework/Versions/3.13/lib/python3.13/json/__init__.py", line 346, in loads
+    return _default_decoder.decode(s)
+           ~~~~~~~~~~~~~~~~~~~~~~~^^^
+  File "/opt/homebrew/Cellar/python@3.13/3.13.7/Frameworks/Python.framework/Versions/3.13/lib/python3.13/json/decoder.py", line 345, in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+               ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.13/3.13.7/Frameworks/Python.framework/Versions/3.13/lib/python3.13/json/decoder.py", line 363, in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+Exit code: 1
+
+6. Testing that logs go to stderr and JSON to stdout:
+Command: echo 'test' | ./target/debug/whisper-background-server test_output/valid_model.bin 1>/dev/null
+Stderr should contain logs:
+Exit code: 0
+
+=== JSON output tests completed ===

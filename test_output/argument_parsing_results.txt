@@ -1,0 +1,53 @@
+=== Testing Argument Parsing ===
+
+1. Testing minimal arguments (model path only):
+Command: ./target/debug/whisper-background-server test_output/test_model.bin
+./test_output/test_argument_parsing.sh: line 14: timeout: command not found
+Exit code: 0
+
+2. Testing with threads option:
+Command: ./target/debug/whisper-background-server test_output/test_model.bin --threads 4
+./test_output/test_argument_parsing.sh: line 20: timeout: command not found
+Exit code: 0
+
+3. Testing with CPU-only flag:
+Command: ./target/debug/whisper-background-server test_output/test_model.bin --cpu-only
+./test_output/test_argument_parsing.sh: line 26: timeout: command not found
+Exit code: 0
+
+4. Testing with both options:
+Command: ./target/debug/whisper-background-server test_output/test_model.bin --threads 8 --cpu-only
+./test_output/test_argument_parsing.sh: line 32: timeout: command not found
+Exit code: 0
+
+5. Testing with invalid model path:
+Command: ./target/debug/whisper-background-server /nonexistent/path/model.bin
+./test_output/test_argument_parsing.sh: line 38: timeout: command not found
+Exit code: 0
+
+6. Testing with no arguments:
+Command: ./target/debug/whisper-background-server
+./test_output/test_argument_parsing.sh: line 44: timeout: command not found
+Exit code: 0
+
+7. Testing with invalid threads value:
+Command: ./target/debug/whisper-background-server test_output/test_model.bin --threads invalid
+./test_output/test_argument_parsing.sh: line 50: timeout: command not found
+Exit code: 0
+
+8. Testing with zero threads:
+Command: ./target/debug/whisper-background-server test_output/test_model.bin --threads 0
+./test_output/test_argument_parsing.sh: line 56: timeout: command not found
+Exit code: 0
+
+9. Testing with unknown argument:
+Command: ./target/debug/whisper-background-server test_output/test_model.bin --unknown
+./test_output/test_argument_parsing.sh: line 62: timeout: command not found
+Exit code: 0
+
+10. Testing with threads option but no value:
+Command: ./target/debug/whisper-background-server test_output/test_model.bin --threads
+./test_output/test_argument_parsing.sh: line 68: timeout: command not found
+Exit code: 0
+
+=== Argument parsing tests completed ===
