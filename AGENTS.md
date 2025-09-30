@@ -15,6 +15,8 @@ Below lists the main technology used in the project. Included are documentation 
   - [`tokio`](https://docs.rs/tokio) (v1.47.1): Async Runtime. Context7: `websites/rs_tokio` and `tokio-rs/tokio`
   - [`serde`](https://docs.rs/serde) (v1.0.226): Serializing/Deserializing crate. Context7: `serde-rs/serde` and `serde-rs/json`
 
+_**NOTE: Do not include any new dependencies, but you may suggest for user to add later.**_
+
 ## Architecture
 
 ### Overview of Process
