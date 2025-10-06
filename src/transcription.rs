@@ -155,8 +155,10 @@ impl TranscriptionService {
         }
 
         // Create full parameters for transcription
-        debug!("Creating transcription parameters with greedy sampling");
-        let mut params = FullParams::new(SamplingStrategy::Greedy { best_of: 1 });
+        debug!("Creating transcription parameters with beam search");
+        let mut params = FullParams::new(SamplingStrategy::BeamSearch {
+            beam_size: beam_size.unwrap_or(5),
+        });
 
         // Set language if specified
         if let Some(ref lang) = self.config.language {
@@ -228,7 +230,7 @@ impl TranscriptionService {
         debug!("Converting audio data to f32 format");
         // Convert audio data to f32 (whisper-rs expects f32 samples)
         let audio_data_f32: Vec<f32> = audio_data
-            .chunks_exact(2) // 16-bit samples are 2 bytes
+            .chunks_exact(2) // 16-bit samples are 2 bytes (little endian order)
             .map(|chunk| {
                 if let [low, high] = chunk {
                     ((i16::from(*high) << 8) | i16::from(*low)) as f32 / 32768.0

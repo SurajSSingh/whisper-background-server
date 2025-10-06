@@ -653,10 +653,10 @@ fn main() {
     // Parse command line arguments
     match parse_arguments(env::args()) {
         Ok(config) => {
-            println!("Configuration loaded successfully:");
-            println!("  Model path: {}", config.model_path);
-            println!("  Threads: {:?}", config.threads);
-            println!("  CPU only: {}", config.cpu_only);
+            eprintln!("Configuration loaded successfully:");
+            eprintln!("  Model path: {}", config.model_path);
+            eprintln!("  Threads: {:?}", config.threads);
+            eprintln!("  CPU only: {}", config.cpu_only);
 
             // Initialize server with configuration
             let runtime = tokio::runtime::Runtime::new().expect("Failed to create tokio runtime");
