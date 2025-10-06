@@ -1,80 +1,124 @@
 === Testing Server Initialization ===
 
 1. Testing valid model file:
-Command: echo 'test' | ./target/debug/whisper-background-server test_output/valid_model.bin
+Command: echo 'test' | ../target/debug/whisper-background-server ../large_files/ggml-base.en.bin
 Output (first 5 lines):
+[1759622981 INFO 0.000s] Starting Whisper Background Server
 Configuration loaded successfully:
-  Model path: test_output/valid_model.bin
+  Model path: ../large_files/ggml-base.en.bin
   Threads: None
   CPU only: false
-whisper_init_from_file_with_params_no_state: loading model from 'test_output/valid_model.bin'
 Exit code: 0
 
 2. Testing with threads configuration:
-Command: echo 'test' | ./target/debug/whisper-background-server test_output/valid_model.bin --threads 2
+Command: echo 'test' | ../target/debug/whisper-background-server ../large_files/ggml-base.en.bin --threads 2
 Output (first 5 lines):
+[1759622981 INFO 0.000s] Starting Whisper Background Server
 Configuration loaded successfully:
-  Model path: test_output/valid_model.bin
+  Model path: ../large_files/ggml-base.en.bin
   Threads: Some(2)
   CPU only: false
-whisper_init_from_file_with_params_no_state: loading model from 'test_output/valid_model.bin'
 Exit code: 0
 
 3. Testing with CPU-only configuration:
-Command: echo 'test' | ./target/debug/whisper-background-server test_output/valid_model.bin --cpu-only
+Command: echo 'test' | ../target/debug/whisper-background-server ../large_files/ggml-base.en.bin --cpu-only
 Output (first 5 lines):
+[1759622981 INFO 0.000s] Starting Whisper Background Server
 Configuration loaded successfully:
-  Model path: test_output/valid_model.bin
+  Model path: ../large_files/ggml-base.en.bin
   Threads: None
   CPU only: true
-whisper_init_from_file_with_params_no_state: loading model from 'test_output/valid_model.bin'
 Exit code: 0
 
 4. Testing with both threads and CPU-only:
-Command: echo 'test' | ./target/debug/whisper-background-server test_output/valid_model.bin --threads 4 --cpu-only
+Command: echo 'test' | ../target/debug/whisper-background-server ../large_files/ggml-base.en.bin --threads 4 --cpu-only
 Output (first 5 lines):
+[1759622981 INFO 0.000s] Starting Whisper Background Server
 Configuration loaded successfully:
-  Model path: test_output/valid_model.bin
+  Model path: ../large_files/ggml-base.en.bin
   Threads: Some(4)
   CPU only: true
-whisper_init_from_file_with_params_no_state: loading model from 'test_output/valid_model.bin'
 Exit code: 0
 
 5. Testing with empty model file:
-Command: echo 'test' | ./target/debug/whisper-background-server test_output/empty_model.bin
+Command: echo 'test' | ../target/debug/whisper-background-server test_output/empty_model.bin
 Output (first 5 lines):
+[1759622981 INFO 0.000s] Starting Whisper Background Server
 Configuration loaded successfully:
   Model path: test_output/empty_model.bin
   Threads: None
   CPU only: false
-Error: Model file is empty: test_output/empty_model.bin
 Exit code: 0
 
 6. Testing with directory instead of file:
-Command: echo 'test' | ./target/debug/whisper-background-server test_output/directory_only
+Command: echo 'test' | ../target/debug/whisper-background-server test_output/directory_only
 Output (first 5 lines):
+[1759622981 INFO 0.000s] Starting Whisper Background Server
 Configuration loaded successfully:
   Model path: test_output/directory_only
   Threads: None
   CPU only: false
-Error: Model file has no extension: test_output/directory_only
 Exit code: 0
 
 7. Testing with wrong file extension:
-Command: echo 'test' | ./target/debug/whisper-background-server test_output/valid_model.txt
+Command: echo 'test' | ../target/debug/whisper-background-server test_output/valid_model.txt
 Output (first 5 lines):
+[1759622981 INFO 0.000s] Starting Whisper Background Server
 Error: Model path does not exist: test_output/valid_model.txt
 Usage: whisper-background-server <model-path> [--threads <number>] [--cpu-only]
 Exit code: 0
 
 8. Testing with nested path:
-Command: echo 'test' | ./target/debug/whisper-background-server test_output/subdir/nested_model.bin
+Command: echo 'test' | ../target/debug/whisper-background-server test_output/subdir/nested_model.bin
 Output (first 5 lines):
+[1759622981 INFO 0.000s] Starting Whisper Background Server
+Error: Model path does not exist: test_output/subdir/nested_model.bin
+Usage: whisper-background-server <model-path> [--threads <number>] [--cpu-only]
+Exit code: 0
+
+9. Testing server initialization with real audio file (jfk.wav):
+Command: base64 -i ../large_files/jfk.wav | ../target/debug/whisper-background-server ../large_files/ggml-base.en.bin
+Output (first 10 lines):
+[1759622981 INFO 0.000s] Starting Whisper Background Server
 Configuration loaded successfully:
-  Model path: test_output/subdir/nested_model.bin
+  Model path: ../large_files/ggml-base.en.bin
   Threads: None
   CPU only: false
-whisper_init_from_file_with_params_no_state: loading model from 'test_output/subdir/nested_model.bin'
+[1759622981 INFO 0.000s] Initializing Whisper Background Server
+[1759622981 INFO 0.000s] Model path: ../large_files/ggml-base.en.bin
+[1759622981 INFO 0.000s] Threads: None
+[1759622981 INFO 0.000s] CPU only: false
+[1759622981 INFO 0.000s] Loading Whisper model from: ../large_files/ggml-base.en.bin
+Exit code: 0
+
+10. Testing server initialization with real audio file (jfk.wav) and threads:
+Command: base64 -i ../large_files/jfk.wav | ../target/debug/whisper-background-server ../large_files/ggml-base.en.bin --threads 4
+Output (first 10 lines):
+[1759622982 INFO 0.000s] Starting Whisper Background Server
+Configuration loaded successfully:
+  Model path: ../large_files/ggml-base.en.bin
+  Threads: Some(4)
+  CPU only: false
+[1759622982 INFO 0.000s] Initializing Whisper Background Server
+[1759622982 INFO 0.000s] Model path: ../large_files/ggml-base.en.bin
+[1759622982 INFO 0.000s] Threads: Some(4)
+[1759622982 INFO 0.000s] CPU only: false
+[1759622982 INFO 0.000s] Loading Whisper model from: ../large_files/ggml-base.en.bin
+Exit code: 0
+
+11. Testing server initialization with real audio file (jfk.wav) and CPU-only:
+Command: base64 -i ../large_files/jfk.wav | ../target/debug/whisper-background-server ../large_files/ggml-base.en.bin --cpu-only
+Output (first 10 lines):
+[1759622982 INFO 0.000s] Starting Whisper Background Server
+Configuration loaded successfully:
+  Model path: ../large_files/ggml-base.en.bin
+  Threads: None
+  CPU only: true
+[1759622982 INFO 0.000s] Initializing Whisper Background Server
+[1759622982 INFO 0.000s] Model path: ../large_files/ggml-base.en.bin
+[1759622982 INFO 0.000s] Threads: None
+[1759622982 INFO 0.000s] CPU only: true
+[1759622982 INFO 0.000s] Loading Whisper model from: ../large_files/ggml-base.en.bin
 Exit code: 0
 
 === Server initialization tests completed ===

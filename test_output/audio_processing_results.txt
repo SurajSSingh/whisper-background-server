@@ -1,123 +1,158 @@
 === Testing Audio Processing with SOT Marker Detection ===
 
 1. Testing basic audio processing without SOT marker:
-Command: echo 'test audio data without marker' | ./target/debug/whisper-background-server test_output/valid_model.bin
+Command: echo 'test audio data without marker' | ../target/debug/whisper-background-server ../large_files/ggml-base.en.bin
 Output (first 10 lines):
+[1759622469 INFO 0.000s] Starting Whisper Background Server
 Configuration loaded successfully:
-  Model path: test_output/valid_model.bin
+  Model path: ../large_files/ggml-base.en.bin
   Threads: None
   CPU only: false
-whisper_init_from_file_with_params_no_state: loading model from 'test_output/valid_model.bin'
-whisper_init_with_params_no_state: use gpu    = 1
-whisper_init_with_params_no_state: flash attn = 0
-whisper_init_with_params_no_state: gpu_device = 0
-whisper_init_with_params_no_state: dtw        = 0
-whisper_init_with_params_no_state: devices    = 2
+[1759622469 INFO 0.006s] Initializing Whisper Background Server
+[1759622469 INFO 0.006s] Model path: ../large_files/ggml-base.en.bin
+[1759622469 INFO 0.006s] Threads: None
+[1759622469 INFO 0.006s] CPU only: false
+[1759622469 INFO 0.006s] Loading Whisper model from: ../large_files/ggml-base.en.bin
 Exit code: 0
 
 2. Testing audio processing with SOT marker at the end:
-Command: printf 'test audio data\0SOT\0' | ./target/debug/whisper-background-server test_output/valid_model.bin
+Command: printf 'test audio data\0SOT\0' | ../target/debug/whisper-background-server ../large_files/ggml-base.en.bin
 Output (first 10 lines):
+[1759622469 INFO 0.000s] Starting Whisper Background Server
 Configuration loaded successfully:
-  Model path: test_output/valid_model.bin
+  Model path: ../large_files/ggml-base.en.bin
   Threads: None
   CPU only: false
-whisper_init_from_file_with_params_no_state: loading model from 'test_output/valid_model.bin'
-whisper_init_with_params_no_state: use gpu    = 1
-whisper_init_with_params_no_state: flash attn = 0
-whisper_init_with_params_no_state: gpu_device = 0
-whisper_init_with_params_no_state: dtw        = 0
-whisper_init_with_params_no_state: devices    = 2
+[1759622469 INFO 0.000s] Initializing Whisper Background Server
+[1759622469 INFO 0.000s] Model path: ../large_files/ggml-base.en.bin
+[1759622469 INFO 0.000s] Threads: None
+[1759622469 INFO 0.000s] CPU only: false
+[1759622469 INFO 0.000s] Loading Whisper model from: ../large_files/ggml-base.en.bin
 Exit code: 0
 
 3. Testing audio processing with SOT marker in the middle:
-Command: printf 'audio before\0SOT\0audio after' | ./target/debug/whisper-background-server test_output/valid_model.bin
+Command: printf 'audio before\0SOT\0audio after' | ../target/debug/whisper-background-server ../large_files/ggml-base.en.bin
 Output (first 10 lines):
+[1759622469 INFO 0.000s] Starting Whisper Background Server
 Configuration loaded successfully:
-  Model path: test_output/valid_model.bin
+  Model path: ../large_files/ggml-base.en.bin
   Threads: None
   CPU only: false
-whisper_init_from_file_with_params_no_state: loading model from 'test_output/valid_model.bin'
-whisper_init_with_params_no_state: use gpu    = 1
-whisper_init_with_params_no_state: flash attn = 0
-whisper_init_with_params_no_state: gpu_device = 0
-whisper_init_with_params_no_state: dtw        = 0
-whisper_init_with_params_no_state: devices    = 2
+[1759622469 INFO 0.000s] Initializing Whisper Background Server
+[1759622469 INFO 0.000s] Model path: ../large_files/ggml-base.en.bin
+[1759622469 INFO 0.000s] Threads: None
+[1759622469 INFO 0.000s] CPU only: false
+[1759622469 INFO 0.000s] Loading Whisper model from: ../large_files/ggml-base.en.bin
 Exit code: 0
 
 4. Testing audio processing with multiple SOT markers (should find the last one):
-Command: printf 'audio\0SOT\0middle\0SOT\0end' | ./target/debug/whisper-background-server test_output/valid_model.bin
+Command: printf 'audio\0SOT\0middle\0SOT\0end' | ../target/debug/whisper-background-server ../large_files/ggml-base.en.bin
 Output (first 10 lines):
+[1759622470 INFO 0.000s] Starting Whisper Background Server
 Configuration loaded successfully:
-  Model path: test_output/valid_model.bin
+  Model path: ../large_files/ggml-base.en.bin
   Threads: None
   CPU only: false
-whisper_init_from_file_with_params_no_state: loading model from 'test_output/valid_model.bin'
-whisper_init_with_params_no_state: use gpu    = 1
-whisper_init_with_params_no_state: flash attn = 0
-whisper_init_with_params_no_state: gpu_device = 0
-whisper_init_with_params_no_state: dtw        = 0
-whisper_init_with_params_no_state: devices    = 2
+[1759622470 INFO 0.000s] Initializing Whisper Background Server
+[1759622470 INFO 0.000s] Model path: ../large_files/ggml-base.en.bin
+[1759622470 INFO 0.000s] Threads: None
+[1759622470 INFO 0.000s] CPU only: false
+[1759622470 INFO 0.000s] Loading Whisper model from: ../large_files/ggml-base.en.bin
 Exit code: 0
 
 5. Testing audio processing with partial SOT marker (should not trigger):
-Command: printf 'audio\0SOT' | ./target/debug/whisper-background-server test_output/valid_model.bin
+Command: printf 'audio\0SOT' | ../target/debug/whisper-background-server ../large_files/ggml-base.en.bin
 Output (first 10 lines):
+[1759622470 INFO 0.000s] Starting Whisper Background Server
 Configuration loaded successfully:
-  Model path: test_output/valid_model.bin
+  Model path: ../large_files/ggml-base.en.bin
   Threads: None
   CPU only: false
-whisper_init_from_file_with_params_no_state: loading model from 'test_output/valid_model.bin'
-whisper_init_with_params_no_state: use gpu    = 1
-whisper_init_with_params_no_state: flash attn = 0
-whisper_init_with_params_no_state: gpu_device = 0
-whisper_init_with_params_no_state: dtw        = 0
-whisper_init_with_params_no_state: devices    = 2
+[1759622470 INFO 0.000s] Initializing Whisper Background Server
+[1759622470 INFO 0.000s] Model path: ../large_files/ggml-base.en.bin
+[1759622470 INFO 0.000s] Threads: None
+[1759622470 INFO 0.000s] CPU only: false
+[1759622470 INFO 0.000s] Loading Whisper model from: ../large_files/ggml-base.en.bin
 Exit code: 0
 
 6. Testing audio processing with SOT marker spanning multiple chunks:
-Command: (echo -n 'part1\0S' && echo -n 'OT\0part2') | ./target/debug/whisper-background-server test_output/valid_model.bin
+Command: (echo -n 'part1\0S' && echo -n 'OT\0part2') | ../target/debug/whisper-background-server ../large_files/ggml-base.en.bin
 Output (first 10 lines):
+[1759622470 INFO 0.000s] Starting Whisper Background Server
 Configuration loaded successfully:
-  Model path: test_output/valid_model.bin
+  Model path: ../large_files/ggml-base.en.bin
   Threads: None
   CPU only: false
-whisper_init_from_file_with_params_no_state: loading model from 'test_output/valid_model.bin'
-whisper_init_with_params_no_state: use gpu    = 1
-whisper_init_with_params_no_state: flash attn = 0
-whisper_init_with_params_no_state: gpu_device = 0
-whisper_init_with_params_no_state: dtw        = 0
-whisper_init_with_params_no_state: devices    = 2
+[1759622470 INFO 0.000s] Initializing Whisper Background Server
+[1759622470 INFO 0.000s] Model path: ../large_files/ggml-base.en.bin
+[1759622470 INFO 0.000s] Threads: None
+[1759622470 INFO 0.000s] CPU only: false
+[1759622470 INFO 0.000s] Loading Whisper model from: ../large_files/ggml-base.en.bin
 Exit code: 0
 
 7. Testing with empty audio data:
-Command: echo '' | ./target/debug/whisper-background-server test_output/valid_model.bin
+Command: echo '' | ../target/debug/whisper-background-server ../large_files/ggml-base.en.bin
 Output (first 10 lines):
+[1759622470 INFO 0.000s] Starting Whisper Background Server
 Configuration loaded successfully:
-  Model path: test_output/valid_model.bin
+  Model path: ../large_files/ggml-base.en.bin
   Threads: None
   CPU only: false
-whisper_init_from_file_with_params_no_state: loading model from 'test_output/valid_model.bin'
-whisper_init_with_params_no_state: use gpu    = 1
-whisper_init_with_params_no_state: flash attn = 0
-whisper_init_with_params_no_state: gpu_device = 0
-whisper_init_with_params_no_state: dtw        = 0
-whisper_init_with_params_no_state: devices    = 2
+[1759622470 INFO 0.000s] Initializing Whisper Background Server
+[1759622470 INFO 0.000s] Model path: ../large_files/ggml-base.en.bin
+[1759622470 INFO 0.000s] Threads: None
+[1759622470 INFO 0.000s] CPU only: false
+[1759622470 INFO 0.000s] Loading Whisper model from: ../large_files/ggml-base.en.bin
 Exit code: 0
 
 8. Testing with binary data that might accidentally contain SOT marker:
-Command: printf '\x00\x01\x02\x00S\x00O\x00T\x00\x03\x04\x05' | ./target/debug/whisper-background-server test_output/valid_model.bin
+Command: printf '\x00\x01\x02\x00S\x00O\x00T\x00\x03\x04\x05' | ../target/debug/whisper-background-server ../large_files/ggml-base.en.bin
 Output (first 10 lines):
+[1759622470 INFO 0.000s] Starting Whisper Background Server
 Configuration loaded successfully:
-  Model path: test_output/valid_model.bin
+  Model path: ../large_files/ggml-base.en.bin
   Threads: None
   CPU only: false
-whisper_init_from_file_with_params_no_state: loading model from 'test_output/valid_model.bin'
+[1759622470 INFO 0.000s] Initializing Whisper Background Server
+[1759622470 INFO 0.000s] Model path: ../large_files/ggml-base.en.bin
+[1759622470 INFO 0.000s] Threads: None
+[1759622470 INFO 0.000s] CPU only: false
+[1759622470 INFO 0.000s] Loading Whisper model from: ../large_files/ggml-base.en.bin
+Exit code: 0
+
+9. Testing with real audio file (jfk.wav) without SOT marker:
+Command: base64 -i ../large_files/jfk.wav | ../target/debug/whisper-background-server ../large_files/ggml-base.en.bin
+Output (first 10 lines):
+[1759622470 INFO 0.000s] Starting Whisper Background Server
+Configuration loaded successfully:
+  Model path: ../large_files/ggml-base.en.bin
+  Threads: None
+  CPU only: false
+[1759622470 INFO 0.000s] Initializing Whisper Background Server
+[1759622470 INFO 0.000s] Model path: ../large_files/ggml-base.en.bin
+[1759622470 INFO 0.000s] Threads: None
+[1759622470 INFO 0.000s] CPU only: false
+[1759622470 INFO 0.000s] Loading Whisper model from: ../large_files/ggml-base.en.bin
+Exit code: 0
+
+10. Testing with real audio file (jfk.wav) with SOT marker:
+Command: base64 -i ../large_files/jfk.wav | sed 's/$/\0SOT\0/' | ../target/debug/whisper-background-server ../large_files/ggml-base.en.bin
+Output (first 15 lines):
+[1759622470 INFO 0.000s] Starting Whisper Background Server
+Configuration loaded successfully:
+  Model path: ../large_files/ggml-base.en.bin
+  Threads: None
+  CPU only: false
+[1759622470 INFO 0.000s] Initializing Whisper Background Server
+[1759622470 INFO 0.000s] Model path: ../large_files/ggml-base.en.bin
+[1759622470 INFO 0.000s] Threads: None
+[1759622470 INFO 0.000s] CPU only: false
+[1759622470 INFO 0.000s] Loading Whisper model from: ../large_files/ggml-base.en.bin
+whisper_init_from_file_with_params_no_state: loading model from '../large_files/ggml-base.en.bin'
 whisper_init_with_params_no_state: use gpu    = 1
 whisper_init_with_params_no_state: flash attn = 0
 whisper_init_with_params_no_state: gpu_device = 0
 whisper_init_with_params_no_state: dtw        = 0
-whisper_init_with_params_no_state: devices    = 2
 Exit code: 0
 
 === Audio processing tests completed ===

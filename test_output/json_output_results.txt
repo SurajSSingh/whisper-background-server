@@ -1,61 +1,71 @@
 === Testing JSON Output Formatting and Stderr/Stdout Separation ===
 
 1. Testing server info JSON output (should be on stdout):
-Command: echo 'test' | ./target/debug/whisper-background-server test_output/valid_model.bin
+Command: echo 'test' | ../target/debug/whisper-background-server ../large_files/ggml-base.en.bin
 Stdout (JSON server info):
 Configuration loaded successfully:
-  Model path: test_output/valid_model.bin
+  Model path: ../large_files/ggml-base.en.bin
   Threads: None
   CPU only: false
+{"provider":"whisper-rs","model_name":"ggml-base.en","version":"0.1.0","attributes":{"file_size":147964211,"model_type":"whisper","gpu_available":false,"gpu_enabled":false},"parameters":{"threads":null,"cpu_only":false,"audio_format":"16kHz mono PCM"}}
 
 Stderr (logs):
-whisper_init_from_file_with_params_no_state: loading model from 'test_output/valid_model.bin'
-whisper_init_with_params_no_state: use gpu    = 1
-whisper_init_with_params_no_state: flash attn = 0
-whisper_init_with_params_no_state: gpu_device = 0
-whisper_init_with_params_no_state: dtw        = 0
+[1759622847 INFO 0.001s] Starting Whisper Background Server
+[1759622847 INFO 0.004s] Initializing Whisper Background Server
+[1759622847 INFO 0.004s] Model path: ../large_files/ggml-base.en.bin
+[1759622847 INFO 0.004s] Threads: None
+[1759622847 INFO 0.004s] CPU only: false
 Exit code: 0
 
 2. Testing error JSON output (when transcription fails):
-Command: printf 'test\0SOT\0' | ./target/debug/whisper-background-server test_output/valid_model.bin
+Command: printf 'test\0SOT\0' | ../target/debug/whisper-background-server ../large_files/ggml-base.en.bin
 Stdout (JSON error result):
 Configuration loaded successfully:
-  Model path: test_output/valid_model.bin
+  Model path: ../large_files/ggml-base.en.bin
   Threads: None
   CPU only: false
+{"provider":"whisper-rs","model_name":"ggml-base.en","version":"0.1.0","attributes":{"file_size":147964211,"model_type":"whisper","gpu_available":false,"gpu_enabled":false},"parameters":{"threads":null,"cpu_only":false,"audio_format":"16kHz mono PCM"}}
 
 Stderr (logs):
-whisper_init_from_file_with_params_no_state: loading model from 'test_output/valid_model.bin'
-whisper_init_with_params_no_state: use gpu    = 1
-whisper_init_with_params_no_state: flash attn = 0
-whisper_init_with_params_no_state: gpu_device = 0
-whisper_init_with_params_no_state: dtw        = 0
+[1759622848 INFO 0.000s] Starting Whisper Background Server
+[1759622848 INFO 0.000s] Initializing Whisper Background Server
+[1759622848 INFO 0.000s] Model path: ../large_files/ggml-base.en.bin
+[1759622848 INFO 0.000s] Threads: None
+[1759622848 INFO 0.000s] CPU only: false
 Exit code: 0
 
 3. Testing JSON output with threads configuration:
-Command: printf 'test\0SOT\0' | ./target/debug/whisper-background-server test_output/valid_model.bin --threads 2
+Command: printf 'test\0SOT\0' | ../target/debug/whisper-background-server ../large_files/ggml-base.en.bin --threads 2
 Stdout (JSON server info):
 Configuration loaded successfully:
-  Model path: test_output/valid_model.bin
+  Model path: ../large_files/ggml-base.en.bin
   Threads: Some(2)
   CPU only: false
+{"provider":"whisper-rs","model_name":"ggml-base.en","version":"0.1.0","attributes":{"file_size":147964211,"model_type":"whisper","gpu_available":false,"gpu_enabled":false},"parameters":{"threads":2,"cpu_only":false,"audio_format":"16kHz mono PCM"}}
 
 Exit code: 0
 
 4. Testing JSON output with CPU-only configuration:
-Command: printf 'test\0SOT\0' | ./target/debug/whisper-background-server test_output/valid_model.bin --cpu-only
+Command: printf 'test\0SOT\0' | ../target/debug/whisper-background-server ../large_files/ggml-base.en.bin --cpu-only
 Stdout (JSON server info):
 Configuration loaded successfully:
-  Model path: test_output/valid_model.bin
+  Model path: ../large_files/ggml-base.en.bin
   Threads: None
   CPU only: true
+{"provider":"whisper-rs","model_name":"ggml-base.en","version":"0.1.0","attributes":{"file_size":147964211,"model_type":"whisper","gpu_available":false,"gpu_enabled":false},"parameters":{"threads":null,"cpu_only":true,"audio_format":"16kHz mono PCM"}}
 
 Exit code: 0
 
 5. Testing JSON structure validation:
-Command: echo 'test' | ./target/debug/whisper-background-server test_output/valid_model.bin | python3 -c 'import sys, json; json.load(sys.stdin); print("JSON is valid")'
+Command: echo 'test' | ../target/debug/whisper-background-server ../large_files/ggml-base.en.bin | python3 -c 'import sys, json; json.load(sys.stdin); print("JSON is valid")'
 Output:
-whisper_init_from_file_with_params_no_state: loading model from 'test_output/valid_model.bin'
+[1759622848 INFO 0.000s] Starting Whisper Background Server
+[1759622848 INFO 0.000s] Initializing Whisper Background Server
+[1759622848 INFO 0.000s] Model path: ../large_files/ggml-base.en.bin
+[1759622848 INFO 0.000s] Threads: None
+[1759622848 INFO 0.000s] CPU only: false
+[1759622848 INFO 0.000s] Loading Whisper model from: ../large_files/ggml-base.en.bin
+whisper_init_from_file_with_params_no_state: loading model from '../large_files/ggml-base.en.bin'
 whisper_init_with_params_no_state: use gpu    = 1
 whisper_init_with_params_no_state: flash attn = 0
 whisper_init_with_params_no_state: gpu_device = 0
@@ -63,9 +73,36 @@ whisper_init_with_params_no_state: dtw        = 0
 whisper_init_with_params_no_state: devices    = 2
 whisper_init_with_params_no_state: backends   = 2
 whisper_model_load: loading model
-whisper_model_load: invalid model data (bad magic)
-whisper_init_with_params_no_state: failed to load model
-Error: Failed to load model: Failed to create a new whisper context.
+whisper_model_load: n_vocab       = 51864
+whisper_model_load: n_audio_ctx   = 1500
+whisper_model_load: n_audio_state = 512
+whisper_model_load: n_audio_head  = 8
+whisper_model_load: n_audio_layer = 6
+whisper_model_load: n_text_ctx    = 448
+whisper_model_load: n_text_state  = 512
+whisper_model_load: n_text_head   = 8
+whisper_model_load: n_text_layer  = 6
+whisper_model_load: n_mels        = 80
+whisper_model_load: ftype         = 1
+whisper_model_load: qntvr         = 0
+whisper_model_load: type          = 2 (base)
+whisper_model_load: adding 1607 extra tokens
+whisper_model_load: n_langs       = 99
+whisper_model_load:          CPU total size =   147.37 MB
+whisper_model_load: model size    =  147.37 MB
+[1759622848 INFO 0.065s] Model loaded successfully
+[1759622848 INFO 0.065s] Creating transcription service with config: TranscriptionConfig { language: None, translate_to_english: false, include_timestamps: true, max_tokens: None, temperature: 0.0, use_beam_search: false, beam_size: None, suppress_blank: true, word_timestamps: false }
+[1759622848 INFO 0.065s] Transcription service created successfully
+[1759622848 INFO 0.065s] Server initialization completed successfully
+[1759622848 INFO 0.065s] Server initialized successfully, ready for audio processing
+[1759622848 INFO 0.065s] Starting audio processing from stdin
+[1759622848 INFO 0.066s] Received audio chunk: 5 bytes
+[1759622848 INFO 0.066s] Added 5 bytes to buffer (total: 5)
+[1759622848 INFO 0.066s] Buffer contains 5 bytes
+[1759622848 INFO 0.066s] Scanning for SOT marker in buffer (5 bytes)
+[1759622848 INFO 0.066s] SOT marker not found in buffer
+[1759622848 INFO 0.066s] Audio stream ended
+[1759622848 INFO 0.066s] Audio processing completed
 Traceback (most recent call last):
   File "<string>", line 1, in <module>
     import sys, json; json.load(sys.stdin); print("JSON is valid")
@@ -87,8 +124,394 @@ json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
 Exit code: 1
 
 6. Testing that logs go to stderr and JSON to stdout:
-Command: echo 'test' | ./target/debug/whisper-background-server test_output/valid_model.bin 1>/dev/null
+Command: echo 'test' | ../target/debug/whisper-background-server ../large_files/ggml-base.en.bin 1>/dev/null
 Stderr should contain logs:
 Exit code: 0
+
+7. Testing JSON output with real audio file (jfk.wav) without SOT marker:
+Command: base64 -i ../large_files/jfk.wav | ../target/debug/whisper-background-server ../large_files/ggml-base.en.bin
+Stdout (JSON server info):
+Configuration loaded successfully:
+  Model path: ../large_files/ggml-base.en.bin
+  Threads: None
+  CPU only: false
+{"provider":"whisper-rs","model_name":"ggml-base.en","version":"0.1.0","attributes":{"file_size":147964211,"model_type":"whisper","gpu_available":false,"gpu_enabled":false},"parameters":{"threads":null,"cpu_only":false,"audio_format":"16kHz mono PCM"}}
+
+Stderr (logs):
+[1759622848 INFO 0.000s] Starting Whisper Background Server
+[1759622848 INFO 0.000s] Initializing Whisper Background Server
+[1759622848 INFO 0.000s] Model path: ../large_files/ggml-base.en.bin
+[1759622848 INFO 0.000s] Threads: None
+[1759622848 INFO 0.000s] CPU only: false
+Exit code: 0
+
+8. Testing JSON output with real audio file (jfk.wav) with SOT marker:
+Command: base64 -i ../large_files/jfk.wav | sed 's/$/\0SOT\0/' | ../target/debug/whisper-background-server ../large_files/ggml-base.en.bin
+Stdout (JSON transcription result):
+Configuration loaded successfully:
+  Model path: ../large_files/ggml-base.en.bin
+  Threads: None
+  CPU only: false
+{"provider":"whisper-rs","model_name":"ggml-base.en","version":"0.1.0","attributes":{"file_size":147964211,"model_type":"whisper","gpu_available":false,"gpu_enabled":false},"parameters":{"threads":null,"cpu_only":false,"audio_format":"16kHz mono PCM"}}
+
+Stderr (logs):
+[1759622848 INFO 0.000s] Starting Whisper Background Server
+[1759622848 INFO 0.000s] Initializing Whisper Background Server
+[1759622848 INFO 0.000s] Model path: ../large_files/ggml-base.en.bin
+[1759622848 INFO 0.000s] Threads: None
+[1759622848 INFO 0.000s] CPU only: false
+Exit code: 0
+
+9. Testing JSON structure validation with real audio:
+Command: base64 -i ../large_files/jfk.wav | sed 's/$/\0SOT\0/' | ../target/debug/whisper-background-server ../large_files/ggml-base.en.bin | python3 -c 'import sys, json; json.load(sys.stdin); print("JSON is valid")'
+Output:
+[1759622849 INFO 0.000s] Starting Whisper Background Server
+[1759622849 INFO 0.000s] Initializing Whisper Background Server
+[1759622849 INFO 0.000s] Model path: ../large_files/ggml-base.en.bin
+[1759622849 INFO 0.000s] Threads: None
+[1759622849 INFO 0.000s] CPU only: false
+[1759622849 INFO 0.000s] Loading Whisper model from: ../large_files/ggml-base.en.bin
+whisper_init_from_file_with_params_no_state: loading model from '../large_files/ggml-base.en.bin'
+whisper_init_with_params_no_state: use gpu    = 1
+whisper_init_with_params_no_state: flash attn = 0
+whisper_init_with_params_no_state: gpu_device = 0
+whisper_init_with_params_no_state: dtw        = 0
+whisper_init_with_params_no_state: devices    = 2
+whisper_init_with_params_no_state: backends   = 2
+whisper_model_load: loading model
+whisper_model_load: n_vocab       = 51864
+whisper_model_load: n_audio_ctx   = 1500
+whisper_model_load: n_audio_state = 512
+whisper_model_load: n_audio_head  = 8
+whisper_model_load: n_audio_layer = 6
+whisper_model_load: n_text_ctx    = 448
+whisper_model_load: n_text_state  = 512
+whisper_model_load: n_text_head   = 8
+whisper_model_load: n_text_layer  = 6
+whisper_model_load: n_mels        = 80
+whisper_model_load: ftype         = 1
+whisper_model_load: qntvr         = 0
+whisper_model_load: type          = 2 (base)
+whisper_model_load: adding 1607 extra tokens
+whisper_model_load: n_langs       = 99
+whisper_model_load:          CPU total size =   147.37 MB
+whisper_model_load: model size    =  147.37 MB
+[1759622849 INFO 0.066s] Model loaded successfully
+[1759622849 INFO 0.067s] Creating transcription service with config: TranscriptionConfig { language: None, translate_to_english: false, include_timestamps: true, max_tokens: None, temperature: 0.0, use_beam_search: false, beam_size: None, suppress_blank: true, word_timestamps: false }
+[1759622849 INFO 0.067s] Transcription service created successfully
+[1759622849 INFO 0.067s] Server initialization completed successfully
+[1759622849 INFO 0.067s] Server initialized successfully, ready for audio processing
+[1759622849 INFO 0.067s] Starting audio processing from stdin
+[1759622849 INFO 0.067s] Received audio chunk: 4096 bytes
+[1759622849 INFO 0.067s] Added 4096 bytes to buffer (total: 4096)
+[1759622849 INFO 0.067s] Buffer contains 4096 bytes
+[1759622849 INFO 0.067s] Scanning for SOT marker in buffer (4096 bytes)
+[1759622849 INFO 0.067s] SOT marker not found in buffer
+[1759622849 INFO 0.067s] Received audio chunk: 4096 bytes
+[1759622849 INFO 0.067s] Added 4096 bytes to buffer (total: 8192)
+[1759622849 INFO 0.067s] Buffer contains 8192 bytes
+[1759622849 INFO 0.067s] Scanning for SOT marker in buffer (8192 bytes)
+[1759622849 INFO 0.067s] SOT marker not found in buffer
+[1759622849 INFO 0.067s] Received audio chunk: 4096 bytes
+[1759622849 INFO 0.067s] Added 4096 bytes to buffer (total: 12288)
+[1759622849 INFO 0.067s] Buffer contains 12288 bytes
+[1759622849 INFO 0.067s] Scanning for SOT marker in buffer (12288 bytes)
+[1759622849 INFO 0.067s] SOT marker not found in buffer
+[1759622849 INFO 0.067s] Received audio chunk: 4096 bytes
+[1759622849 INFO 0.067s] Added 4096 bytes to buffer (total: 16384)
+[1759622849 INFO 0.067s] Buffer contains 16384 bytes
+[1759622849 INFO 0.067s] Scanning for SOT marker in buffer (16384 bytes)
+[1759622849 INFO 0.068s] SOT marker not found in buffer
+[1759622849 INFO 0.068s] Received audio chunk: 4096 bytes
+[1759622849 INFO 0.068s] Added 4096 bytes to buffer (total: 20480)
+[1759622849 INFO 0.068s] Buffer contains 20480 bytes
+[1759622849 INFO 0.068s] Scanning for SOT marker in buffer (20480 bytes)
+[1759622849 INFO 0.068s] SOT marker not found in buffer
+[1759622849 INFO 0.068s] Received audio chunk: 4096 bytes
+[1759622849 INFO 0.068s] Added 4096 bytes to buffer (total: 24576)
+[1759622849 INFO 0.068s] Buffer contains 24576 bytes
+[1759622849 INFO 0.068s] Scanning for SOT marker in buffer (24576 bytes)
+[1759622849 INFO 0.069s] SOT marker not found in buffer
+[1759622849 INFO 0.069s] Received audio chunk: 4096 bytes
+[1759622849 INFO 0.069s] Added 4096 bytes to buffer (total: 28672)
+[1759622849 INFO 0.069s] Buffer contains 28672 bytes
+[1759622849 INFO 0.069s] Scanning for SOT marker in buffer (28672 bytes)
+[1759622849 INFO 0.069s] SOT marker not found in buffer
+[1759622849 INFO 0.069s] Received audio chunk: 4096 bytes
+[1759622849 INFO 0.069s] Added 4096 bytes to buffer (total: 32768)
+[1759622849 INFO 0.069s] Buffer contains 32768 bytes
+[1759622849 INFO 0.069s] Scanning for SOT marker in buffer (32768 bytes)
+[1759622849 INFO 0.070s] SOT marker not found in buffer
+[1759622849 INFO 0.070s] Received audio chunk: 4096 bytes
+[1759622849 INFO 0.070s] Added 4096 bytes to buffer (total: 36864)
+[1759622849 INFO 0.070s] Buffer contains 36864 bytes
+[1759622849 INFO 0.070s] Scanning for SOT marker in buffer (36864 bytes)
+[1759622849 INFO 0.071s] SOT marker not found in buffer
+[1759622849 INFO 0.071s] Received audio chunk: 4096 bytes
+[1759622849 INFO 0.071s] Added 4096 bytes to buffer (total: 40960)
+[1759622849 INFO 0.071s] Buffer contains 40960 bytes
+[1759622849 INFO 0.071s] Scanning for SOT marker in buffer (40960 bytes)
+[1759622849 INFO 0.071s] SOT marker not found in buffer
+[1759622849 INFO 0.071s] Received audio chunk: 4096 bytes
+[1759622849 INFO 0.071s] Added 4096 bytes to buffer (total: 45056)
+[1759622849 INFO 0.071s] Buffer contains 45056 bytes
+[1759622849 INFO 0.071s] Scanning for SOT marker in buffer (45056 bytes)
+[1759622849 INFO 0.072s] SOT marker not found in buffer
+[1759622849 INFO 0.072s] Received audio chunk: 4096 bytes
+[1759622849 INFO 0.072s] Added 4096 bytes to buffer (total: 49152)
+[1759622849 INFO 0.072s] Buffer contains 49152 bytes
+[1759622849 INFO 0.072s] Scanning for SOT marker in buffer (49152 bytes)
+[1759622849 INFO 0.073s] SOT marker not found in buffer
+[1759622849 INFO 0.073s] Received audio chunk: 4096 bytes
+[1759622849 INFO 0.073s] Added 4096 bytes to buffer (total: 53248)
+[1759622849 INFO 0.073s] Buffer contains 53248 bytes
+[1759622849 INFO 0.073s] Scanning for SOT marker in buffer (53248 bytes)
+[1759622849 INFO 0.074s] SOT marker not found in buffer
+[1759622849 INFO 0.074s] Received audio chunk: 4096 bytes
+[1759622849 INFO 0.074s] Added 4096 bytes to buffer (total: 57344)
+[1759622849 INFO 0.074s] Buffer contains 57344 bytes
+[1759622849 INFO 0.074s] Scanning for SOT marker in buffer (57344 bytes)
+[1759622849 INFO 0.075s] SOT marker not found in buffer
+[1759622849 INFO 0.075s] Received audio chunk: 4096 bytes
+[1759622849 INFO 0.075s] Added 4096 bytes to buffer (total: 61440)
+[1759622849 INFO 0.075s] Buffer contains 61440 bytes
+[1759622849 INFO 0.075s] Scanning for SOT marker in buffer (61440 bytes)
+[1759622849 INFO 0.076s] SOT marker not found in buffer
+[1759622849 INFO 0.076s] Received audio chunk: 4096 bytes
+[1759622849 INFO 0.076s] Added 4096 bytes to buffer (total: 65536)
+[1759622849 INFO 0.076s] Buffer contains 65536 bytes
+[1759622849 INFO 0.076s] Scanning for SOT marker in buffer (65536 bytes)
+[1759622849 INFO 0.078s] SOT marker not found in buffer
+[1759622849 INFO 0.078s] Received audio chunk: 4096 bytes
+[1759622849 INFO 0.078s] Added 4096 bytes to buffer (total: 69632)
+[1759622849 INFO 0.078s] Buffer contains 69632 bytes
+[1759622849 INFO 0.078s] Scanning for SOT marker in buffer (69632 bytes)
+[1759622849 INFO 0.079s] SOT marker not found in buffer
+[1759622849 INFO 0.079s] Received audio chunk: 4096 bytes
+[1759622849 INFO 0.079s] Added 4096 bytes to buffer (total: 73728)
+[1759622849 INFO 0.079s] Buffer contains 73728 bytes
+[1759622849 INFO 0.079s] Scanning for SOT marker in buffer (73728 bytes)
+[1759622849 INFO 0.080s] SOT marker not found in buffer
+[1759622849 INFO 0.080s] Received audio chunk: 4096 bytes
+[1759622849 INFO 0.080s] Added 4096 bytes to buffer (total: 77824)
+[1759622849 INFO 0.080s] Buffer contains 77824 bytes
+[1759622849 INFO 0.080s] Scanning for SOT marker in buffer (77824 bytes)
+[1759622849 INFO 0.082s] SOT marker not found in buffer
+[1759622849 INFO 0.082s] Received audio chunk: 4096 bytes
+[1759622849 INFO 0.082s] Added 4096 bytes to buffer (total: 81920)
+[1759622849 INFO 0.082s] Buffer contains 81920 bytes
+[1759622849 INFO 0.082s] Scanning for SOT marker in buffer (81920 bytes)
+[1759622849 INFO 0.083s] SOT marker not found in buffer
+[1759622849 INFO 0.083s] Received audio chunk: 4096 bytes
+[1759622849 INFO 0.083s] Added 4096 bytes to buffer (total: 86016)
+[1759622849 INFO 0.083s] Buffer contains 86016 bytes
+[1759622849 INFO 0.083s] Scanning for SOT marker in buffer (86016 bytes)
+[1759622849 INFO 0.085s] SOT marker not found in buffer
+[1759622849 INFO 0.085s] Received audio chunk: 4096 bytes
+[1759622849 INFO 0.085s] Added 4096 bytes to buffer (total: 90112)
+[1759622849 INFO 0.085s] Buffer contains 90112 bytes
+[1759622849 INFO 0.085s] Scanning for SOT marker in buffer (90112 bytes)
+[1759622849 INFO 0.086s] SOT marker not found in buffer
+[1759622849 INFO 0.086s] Received audio chunk: 4096 bytes
+[1759622849 INFO 0.086s] Added 4096 bytes to buffer (total: 94208)
+[1759622849 INFO 0.086s] Buffer contains 94208 bytes
+[1759622849 INFO 0.086s] Scanning for SOT marker in buffer (94208 bytes)
+[1759622849 INFO 0.088s] SOT marker not found in buffer
+[1759622849 INFO 0.088s] Received audio chunk: 4096 bytes
+[1759622849 INFO 0.088s] Added 4096 bytes to buffer (total: 98304)
+[1759622849 INFO 0.088s] Buffer contains 98304 bytes
+[1759622849 INFO 0.088s] Scanning for SOT marker in buffer (98304 bytes)
+[1759622849 INFO 0.090s] SOT marker not found in buffer
+[1759622849 INFO 0.090s] Received audio chunk: 4096 bytes
+[1759622849 INFO 0.090s] Added 4096 bytes to buffer (total: 102400)
+[1759622849 INFO 0.090s] Buffer contains 102400 bytes
+[1759622849 INFO 0.090s] Scanning for SOT marker in buffer (102400 bytes)
+[1759622849 INFO 0.092s] SOT marker not found in buffer
+[1759622849 INFO 0.092s] Received audio chunk: 4096 bytes
+[1759622849 INFO 0.092s] Added 4096 bytes to buffer (total: 106496)
+[1759622849 INFO 0.092s] Buffer contains 106496 bytes
+[1759622849 INFO 0.092s] Scanning for SOT marker in buffer (106496 bytes)
+[1759622849 INFO 0.094s] SOT marker not found in buffer
+[1759622849 INFO 0.094s] Received audio chunk: 4096 bytes
+[1759622849 INFO 0.094s] Added 4096 bytes to buffer (total: 110592)
+[1759622849 INFO 0.094s] Buffer contains 110592 bytes
+[1759622849 INFO 0.094s] Scanning for SOT marker in buffer (110592 bytes)
+[1759622849 INFO 0.095s] SOT marker not found in buffer
+[1759622849 INFO 0.095s] Received audio chunk: 4096 bytes
+[1759622849 INFO 0.096s] Added 4096 bytes to buffer (total: 114688)
+[1759622849 INFO 0.096s] Buffer contains 114688 bytes
+[1759622849 INFO 0.096s] Scanning for SOT marker in buffer (114688 bytes)
+[1759622849 INFO 0.097s] SOT marker not found in buffer
+[1759622849 INFO 0.097s] Received audio chunk: 4096 bytes
+[1759622849 INFO 0.097s] Added 4096 bytes to buffer (total: 118784)
+[1759622849 INFO 0.098s] Buffer contains 118784 bytes
+[1759622849 INFO 0.098s] Scanning for SOT marker in buffer (118784 bytes)
+[1759622849 INFO 0.100s] SOT marker not found in buffer
+[1759622849 INFO 0.100s] Received audio chunk: 4096 bytes
+[1759622849 INFO 0.100s] Added 4096 bytes to buffer (total: 122880)
+[1759622849 INFO 0.100s] Buffer contains 122880 bytes
+[1759622849 INFO 0.100s] Scanning for SOT marker in buffer (122880 bytes)
+[1759622849 INFO 0.102s] SOT marker not found in buffer
+[1759622849 INFO 0.102s] Received audio chunk: 4096 bytes
+[1759622849 INFO 0.102s] Added 4096 bytes to buffer (total: 126976)
+[1759622849 INFO 0.102s] Buffer contains 126976 bytes
+[1759622849 INFO 0.102s] Scanning for SOT marker in buffer (126976 bytes)
+[1759622849 INFO 0.104s] SOT marker not found in buffer
+[1759622849 INFO 0.104s] Received audio chunk: 4096 bytes
+[1759622849 INFO 0.104s] Added 4096 bytes to buffer (total: 131072)
+[1759622849 INFO 0.104s] Buffer contains 131072 bytes
+[1759622849 INFO 0.104s] Scanning for SOT marker in buffer (131072 bytes)
+[1759622849 INFO 0.106s] SOT marker not found in buffer
+[1759622849 INFO 0.106s] Received audio chunk: 4096 bytes
+[1759622849 INFO 0.106s] Added 4096 bytes to buffer (total: 135168)
+[1759622849 INFO 0.106s] Buffer contains 135168 bytes
+[1759622849 INFO 0.106s] Scanning for SOT marker in buffer (135168 bytes)
+[1759622849 INFO 0.109s] SOT marker not found in buffer
+[1759622849 INFO 0.109s] Received audio chunk: 4096 bytes
+[1759622849 INFO 0.109s] Added 4096 bytes to buffer (total: 139264)
+[1759622849 INFO 0.109s] Buffer contains 139264 bytes
+[1759622849 INFO 0.109s] Scanning for SOT marker in buffer (139264 bytes)
+[1759622849 INFO 0.111s] SOT marker not found in buffer
+[1759622849 INFO 0.111s] Received audio chunk: 4096 bytes
+[1759622849 INFO 0.111s] Added 4096 bytes to buffer (total: 143360)
+[1759622849 INFO 0.111s] Buffer contains 143360 bytes
+[1759622849 INFO 0.111s] Scanning for SOT marker in buffer (143360 bytes)
+[1759622849 INFO 0.114s] SOT marker not found in buffer
+[1759622849 INFO 0.114s] Received audio chunk: 4096 bytes
+[1759622849 INFO 0.114s] Added 4096 bytes to buffer (total: 147456)
+[1759622849 INFO 0.114s] Buffer contains 147456 bytes
+[1759622849 INFO 0.114s] Scanning for SOT marker in buffer (147456 bytes)
+[1759622849 INFO 0.116s] SOT marker not found in buffer
+[1759622849 INFO 0.116s] Received audio chunk: 4096 bytes
+[1759622849 INFO 0.116s] Added 4096 bytes to buffer (total: 151552)
+[1759622849 INFO 0.116s] Buffer contains 151552 bytes
+[1759622849 INFO 0.116s] Scanning for SOT marker in buffer (151552 bytes)
+[1759622849 INFO 0.119s] SOT marker not found in buffer
+[1759622849 INFO 0.119s] Received audio chunk: 4096 bytes
+[1759622849 INFO 0.119s] Added 4096 bytes to buffer (total: 155648)
+[1759622849 INFO 0.119s] Buffer contains 155648 bytes
+[1759622849 INFO 0.119s] Scanning for SOT marker in buffer (155648 bytes)
+[1759622849 INFO 0.122s] SOT marker not found in buffer
+[1759622849 INFO 0.122s] Received audio chunk: 4096 bytes
+[1759622849 INFO 0.122s] Added 4096 bytes to buffer (total: 159744)
+[1759622849 INFO 0.122s] Buffer contains 159744 bytes
+[1759622849 INFO 0.122s] Scanning for SOT marker in buffer (159744 bytes)
+[1759622849 INFO 0.125s] SOT marker not found in buffer
+[1759622849 INFO 0.125s] Received audio chunk: 4096 bytes
+[1759622849 INFO 0.125s] Added 4096 bytes to buffer (total: 163840)
+[1759622849 INFO 0.125s] Buffer contains 163840 bytes
+[1759622849 INFO 0.125s] Scanning for SOT marker in buffer (163840 bytes)
+[1759622849 INFO 0.127s] SOT marker not found in buffer
+[1759622849 INFO 0.127s] Received audio chunk: 4096 bytes
+[1759622849 INFO 0.128s] Added 4096 bytes to buffer (total: 167936)
+[1759622849 INFO 0.128s] Buffer contains 167936 bytes
+[1759622849 INFO 0.128s] Scanning for SOT marker in buffer (167936 bytes)
+[1759622849 INFO 0.130s] SOT marker not found in buffer
+[1759622849 INFO 0.130s] Received audio chunk: 4096 bytes
+[1759622849 INFO 0.130s] Added 4096 bytes to buffer (total: 172032)
+[1759622849 INFO 0.130s] Buffer contains 172032 bytes
+[1759622849 INFO 0.130s] Scanning for SOT marker in buffer (172032 bytes)
+[1759622849 INFO 0.133s] SOT marker not found in buffer
+[1759622849 INFO 0.133s] Received audio chunk: 4096 bytes
+[1759622849 INFO 0.133s] Added 4096 bytes to buffer (total: 176128)
+[1759622849 INFO 0.133s] Buffer contains 176128 bytes
+[1759622849 INFO 0.134s] Scanning for SOT marker in buffer (176128 bytes)
+[1759622849 INFO 0.137s] SOT marker not found in buffer
+[1759622849 INFO 0.137s] Received audio chunk: 4096 bytes
+[1759622849 INFO 0.137s] Added 4096 bytes to buffer (total: 180224)
+[1759622849 INFO 0.137s] Buffer contains 180224 bytes
+[1759622849 INFO 0.137s] Scanning for SOT marker in buffer (180224 bytes)
+[1759622849 INFO 0.140s] SOT marker not found in buffer
+[1759622849 INFO 0.140s] Received audio chunk: 4096 bytes
+[1759622849 INFO 0.140s] Added 4096 bytes to buffer (total: 184320)
+[1759622849 INFO 0.140s] Buffer contains 184320 bytes
+[1759622849 INFO 0.140s] Scanning for SOT marker in buffer (184320 bytes)
+[1759622849 INFO 0.144s] SOT marker not found in buffer
+[1759622849 INFO 0.144s] Received audio chunk: 4096 bytes
+[1759622849 INFO 0.144s] Added 4096 bytes to buffer (total: 188416)
+[1759622849 INFO 0.144s] Buffer contains 188416 bytes
+[1759622849 INFO 0.144s] Scanning for SOT marker in buffer (188416 bytes)
+[1759622849 INFO 0.147s] SOT marker not found in buffer
+[1759622849 INFO 0.147s] Received audio chunk: 4096 bytes
+[1759622849 INFO 0.147s] Added 4096 bytes to buffer (total: 192512)
+[1759622849 INFO 0.147s] Buffer contains 192512 bytes
+[1759622849 INFO 0.147s] Scanning for SOT marker in buffer (192512 bytes)
+[1759622849 INFO 0.150s] SOT marker not found in buffer
+[1759622849 INFO 0.150s] Received audio chunk: 4096 bytes
+[1759622849 INFO 0.150s] Added 4096 bytes to buffer (total: 196608)
+[1759622849 INFO 0.150s] Buffer contains 196608 bytes
+[1759622849 INFO 0.151s] Scanning for SOT marker in buffer (196608 bytes)
+[1759622849 INFO 0.154s] SOT marker not found in buffer
+[1759622849 INFO 0.154s] Received audio chunk: 4096 bytes
+[1759622849 INFO 0.154s] Added 4096 bytes to buffer (total: 200704)
+[1759622849 INFO 0.154s] Buffer contains 200704 bytes
+[1759622849 INFO 0.154s] Scanning for SOT marker in buffer (200704 bytes)
+[1759622849 INFO 0.157s] SOT marker not found in buffer
+[1759622849 INFO 0.157s] Received audio chunk: 4096 bytes
+[1759622849 INFO 0.157s] Added 4096 bytes to buffer (total: 204800)
+[1759622849 INFO 0.158s] Buffer contains 204800 bytes
+[1759622849 INFO 0.158s] Scanning for SOT marker in buffer (204800 bytes)
+[1759622849 INFO 0.161s] SOT marker not found in buffer
+[1759622849 INFO 0.161s] Received audio chunk: 4096 bytes
+[1759622849 INFO 0.161s] Added 4096 bytes to buffer (total: 208896)
+[1759622849 INFO 0.161s] Buffer contains 208896 bytes
+[1759622849 INFO 0.161s] Scanning for SOT marker in buffer (208896 bytes)
+[1759622849 INFO 0.165s] SOT marker not found in buffer
+[1759622849 INFO 0.165s] Received audio chunk: 4096 bytes
+[1759622849 INFO 0.165s] Added 4096 bytes to buffer (total: 212992)
+[1759622849 INFO 0.165s] Buffer contains 212992 bytes
+[1759622849 INFO 0.165s] Scanning for SOT marker in buffer (212992 bytes)
+[1759622849 INFO 0.168s] SOT marker not found in buffer
+[1759622849 INFO 0.168s] Received audio chunk: 4096 bytes
+[1759622849 INFO 0.168s] Added 4096 bytes to buffer (total: 217088)
+[1759622849 INFO 0.168s] Buffer contains 217088 bytes
+[1759622849 INFO 0.168s] Scanning for SOT marker in buffer (217088 bytes)
+[1759622849 INFO 0.172s] SOT marker not found in buffer
+[1759622849 INFO 0.172s] Received audio chunk: 4096 bytes
+[1759622849 INFO 0.172s] Added 4096 bytes to buffer (total: 221184)
+[1759622849 INFO 0.172s] Buffer contains 221184 bytes
+[1759622849 INFO 0.172s] Scanning for SOT marker in buffer (221184 bytes)
+[1759622849 INFO 0.176s] SOT marker not found in buffer
+[1759622849 INFO 0.176s] Received audio chunk: 4096 bytes
+[1759622849 INFO 0.176s] Added 4096 bytes to buffer (total: 225280)
+[1759622849 INFO 0.176s] Buffer contains 225280 bytes
+[1759622849 INFO 0.176s] Scanning for SOT marker in buffer (225280 bytes)
+[1759622849 INFO 0.180s] SOT marker not found in buffer
+[1759622849 INFO 0.180s] Received audio chunk: 4096 bytes
+[1759622849 INFO 0.180s] Added 4096 bytes to buffer (total: 229376)
+[1759622849 INFO 0.180s] Buffer contains 229376 bytes
+[1759622849 INFO 0.180s] Scanning for SOT marker in buffer (229376 bytes)
+[1759622849 INFO 0.184s] SOT marker not found in buffer
+[1759622849 INFO 0.184s] Received audio chunk: 4096 bytes
+[1759622849 INFO 0.184s] Added 4096 bytes to buffer (total: 233472)
+[1759622849 INFO 0.184s] Buffer contains 233472 bytes
+[1759622849 INFO 0.184s] Scanning for SOT marker in buffer (233472 bytes)
+[1759622849 INFO 0.188s] SOT marker not found in buffer
+[1759622849 INFO 0.188s] Received audio chunk: 2504 bytes
+[1759622849 INFO 0.188s] Added 2504 bytes to buffer (total: 235976)
+[1759622849 INFO 0.188s] Buffer contains 235976 bytes
+[1759622849 INFO 0.188s] Scanning for SOT marker in buffer (235976 bytes)
+[1759622849 INFO 0.192s] SOT marker not found in buffer
+[1759622849 INFO 0.192s] Audio stream ended
+[1759622849 INFO 0.193s] Audio processing completed
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+    import sys, json; json.load(sys.stdin); print("JSON is valid")
+                      ~~~~~~~~~^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.13/3.13.7/Frameworks/Python.framework/Versions/3.13/lib/python3.13/json/__init__.py", line 293, in load
+    return loads(fp.read(),
+        cls=cls, object_hook=object_hook,
+        parse_float=parse_float, parse_int=parse_int,
+        parse_constant=parse_constant, object_pairs_hook=object_pairs_hook, **kw)
+  File "/opt/homebrew/Cellar/python@3.13/3.13.7/Frameworks/Python.framework/Versions/3.13/lib/python3.13/json/__init__.py", line 346, in loads
+    return _default_decoder.decode(s)
+           ~~~~~~~~~~~~~~~~~~~~~~~^^^
+  File "/opt/homebrew/Cellar/python@3.13/3.13.7/Frameworks/Python.framework/Versions/3.13/lib/python3.13/json/decoder.py", line 345, in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+               ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.13/3.13.7/Frameworks/Python.framework/Versions/3.13/lib/python3.13/json/decoder.py", line 363, in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+Exit code: 1
 
 === JSON output tests completed ===

@@ -1,53 +1,57 @@
 === Testing Argument Parsing ===
 
 1. Testing minimal arguments (model path only):
-Command: ./target/debug/whisper-background-server test_output/test_model.bin
-./test_output/test_argument_parsing.sh: line 14: timeout: command not found
+Command: ../target/debug/whisper-background-server ../large_files/ggml-base.en.bin
+./test_argument_parsing.sh: line 17: kill: %1: no such job
 Exit code: 0
 
 2. Testing with threads option:
-Command: ./target/debug/whisper-background-server test_output/test_model.bin --threads 4
-./test_output/test_argument_parsing.sh: line 20: timeout: command not found
+Command: ../target/debug/whisper-background-server ../large_files/ggml-base.en.bin --threads 4
+./test_argument_parsing.sh: line 23: kill: %1: no such job
 Exit code: 0
 
 3. Testing with CPU-only flag:
-Command: ./target/debug/whisper-background-server test_output/test_model.bin --cpu-only
-./test_output/test_argument_parsing.sh: line 26: timeout: command not found
+Command: ../target/debug/whisper-background-server ../large_files/ggml-base.en.bin --cpu-only
+./test_argument_parsing.sh: line 29: kill: %1: no such job
 Exit code: 0
 
 4. Testing with both options:
-Command: ./target/debug/whisper-background-server test_output/test_model.bin --threads 8 --cpu-only
-./test_output/test_argument_parsing.sh: line 32: timeout: command not found
+Command: ../target/debug/whisper-background-server ../large_files/ggml-base.en.bin --threads 8 --cpu-only
+./test_argument_parsing.sh: line 35: kill: %1: no such job
 Exit code: 0
 
 5. Testing with invalid model path:
-Command: ./target/debug/whisper-background-server /nonexistent/path/model.bin
-./test_output/test_argument_parsing.sh: line 38: timeout: command not found
+Command: ../target/debug/whisper-background-server /nonexistent/path/model.bin
+[1759622314 INFO 0.000s] Starting Whisper Background Server
+Error: Model path does not exist: /nonexistent/path/model.bin
+Usage: whisper-background-server <model-path> [--threads <number>] [--cpu-only]
 Exit code: 0
 
 6. Testing with no arguments:
-Command: ./target/debug/whisper-background-server
-./test_output/test_argument_parsing.sh: line 44: timeout: command not found
+Command: ../target/debug/whisper-background-server
+[1759622314 INFO 0.000s] Starting Whisper Background Server
+Error: Model path is required. Usage: whisper-background-server <model-path> [--threads <number>] [--cpu-only]
+Usage: whisper-background-server <model-path> [--threads <number>] [--cpu-only]
 Exit code: 0
 
 7. Testing with invalid threads value:
-Command: ./target/debug/whisper-background-server test_output/test_model.bin --threads invalid
-./test_output/test_argument_parsing.sh: line 50: timeout: command not found
+Command: ../target/debug/whisper-background-server ../large_files/ggml-base.en.bin --threads invalid
+./test_argument_parsing.sh: line 53: timeout: command not found
 Exit code: 0
 
 8. Testing with zero threads:
-Command: ./target/debug/whisper-background-server test_output/test_model.bin --threads 0
-./test_output/test_argument_parsing.sh: line 56: timeout: command not found
+Command: ../target/debug/whisper-background-server ../large_files/ggml-base.en.bin --threads 0
+./test_argument_parsing.sh: line 59: timeout: command not found
 Exit code: 0
 
 9. Testing with unknown argument:
-Command: ./target/debug/whisper-background-server test_output/test_model.bin --unknown
-./test_output/test_argument_parsing.sh: line 62: timeout: command not found
+Command: ../target/debug/whisper-background-server ../large_files/ggml-base.en.bin --unknown
+./test_argument_parsing.sh: line 65: timeout: command not found
 Exit code: 0
 
 10. Testing with threads option but no value:
-Command: ./target/debug/whisper-background-server test_output/test_model.bin --threads
-./test_output/test_argument_parsing.sh: line 68: timeout: command not found
+Command: ../target/debug/whisper-background-server ../large_files/ggml-base.en.bin --threads
+./test_argument_parsing.sh: line 71: timeout: command not found
 Exit code: 0
 
 === Argument parsing tests completed ===
