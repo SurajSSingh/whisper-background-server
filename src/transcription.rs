@@ -19,7 +19,7 @@ pub struct TranscriptionConfig {
     /// Whether to use beam search decoding
     pub use_beam_search: bool,
     /// Number of beams for beam search
-    pub beam_size: Option<usize>,
+    pub beam_size: Option<i32>,
     /// Whether to suppress blank tokens
     pub suppress_blank: bool,
     /// Whether to enable word timestamps
@@ -157,7 +157,8 @@ impl TranscriptionService {
         // Create full parameters for transcription
         debug!("Creating transcription parameters with beam search");
         let mut params = FullParams::new(SamplingStrategy::BeamSearch {
-            beam_size: beam_size.unwrap_or(5),
+            beam_size: self.config.beam_size.unwrap_or(5),
+            patience: 1.0,
         });
 
         // Set language if specified
