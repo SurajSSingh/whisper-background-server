@@ -1,7 +1,203 @@
+use base64::Engine;
 use log::{debug, error, info, warn};
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
 use whisper_rs::{FullParams, SamplingStrategy, WhisperContext};
+
+/// JSON request structure for audio transcription
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TranscriptionRequest {
+    /// Audio data - can be base64 encoded string or binary data
+    pub audio_data: AudioDataFormat,
+    /// Transcription options
+    pub options: Option<TranscriptionOptions>,
+}
+
+/// Audio data format - supports both base64 and binary representations
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum AudioDataFormat {
+    /// Base64-encoded audio data
+    Base64 {
+        /// Base64 encoded audio string
+        data: String,
+        /// Format hint (optional)
+        #[serde(rename = "format")]
+        _format: Option<String>,
+    },
+    /// Binary audio data as Vec<u8>
+    Binary {
+        /// Binary audio data
+        data: Vec<u8>,
+        /// Format hint (optional)
+        #[serde(rename = "format")]
+        _format: Option<String>,
+    },
+}
+
+/// Transcription options that can be configured via JSON
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TranscriptionOptions {
+    /// Language code (e.g., "en", "es", "fr")
+    pub language: Option<String>,
+    /// Whether to translate the text to English (for multilingual models)
+    pub translate_to_english: Option<bool>,
+    /// Whether to include timestamps in the output
+    pub include_timestamps: Option<bool>,
+    /// Maximum number of tokens to generate
+    pub max_tokens: Option<usize>,
+    /// Temperature for sampling (0.0 to 1.0)
+    pub temperature: Option<f32>,
+    /// Whether to use beam search decoding
+    pub use_beam_search: Option<bool>,
+    /// Number of beams for beam search
+    pub beam_size: Option<i32>,
+    /// Whether to suppress blank tokens
+    pub suppress_blank: Option<bool>,
+    /// Whether to enable word timestamps
+    pub word_timestamps: Option<bool>,
+}
+
+impl Default for TranscriptionOptions {
+    fn default() -> Self {
+        Self {
+            language: None,
+            translate_to_english: Some(false),
+            include_timestamps: Some(true),
+            max_tokens: None,
+            temperature: Some(0.0),
+            use_beam_search: Some(false),
+            beam_size: None,
+            suppress_blank: Some(true),
+            word_timestamps: Some(false),
+        }
+    }
+}
+
+/// Extract audio data from a TranscriptionRequest
+///
+/// # Arguments
+/// * `request` - The transcription request containing audio data
+///
+/// # Returns
+/// * `Result<Vec<u8>, String>` - Audio data as Vec<u8> on success, error message on failure
+pub fn extract_audio_data(request: &TranscriptionRequest) -> Result<Vec<u8>, String> {
+    debug!("Extracting audio data from transcription request");
+
+    match &request.audio_data {
+        AudioDataFormat::Base64 { data, .. } => {
+            debug!("Processing base64-encoded audio data");
+            info!(
+                "Processing base64-encoded audio data: {} characters",
+                data.len()
+            );
+
+            // Decode base64 data
+            match base64::engine::general_purpose::STANDARD.decode(data) {
+                Ok(decoded_data) => {
+                    debug!(
+                        "Successfully decoded base64 audio data: {} bytes",
+                        decoded_data.len()
+                    );
+                    info!(
+                        "Successfully decoded base64 audio data: {} bytes",
+                        decoded_data.len()
+                    );
+                    Ok(decoded_data)
+                }
+                Err(e) => {
+                    error!("Failed to decode base64 audio data: {}", e);
+                    Err(format!("Failed to decode base64 audio data: {}", e))
+                }
+            }
+        }
+        AudioDataFormat::Binary { data, .. } => {
+            debug!("Processing binary audio data");
+            info!("Processing binary audio data: {} bytes", data.len());
+
+            // Validate binary data is not empty
+            if data.is_empty() {
+                error!("Binary audio data is empty");
+                return Err("Binary audio data is empty".to_string());
+            }
+
+            // Create a copy of the binary data
+            let audio_data = data.clone();
+            debug!(
+                "Successfully processed binary audio data: {} bytes",
+                audio_data.len()
+            );
+            info!(
+                "Successfully processed binary audio data: {} bytes",
+                audio_data.len()
+            );
+            Ok(audio_data)
+        }
+    }
+}
+
+/// Update transcription configuration from JSON options
+///
+/// # Arguments
+/// * `config` - Base transcription configuration to update
+/// * `options` - JSON options to apply
+///
+/// # Returns
+/// * `TranscriptionConfig` - Updated configuration
+pub fn update_config_from_options(
+    config: &TranscriptionConfig,
+    options: &TranscriptionOptions,
+) -> TranscriptionConfig {
+    debug!("Updating transcription configuration from JSON options");
+    info!(
+        "Updating transcription configuration from JSON options: {:?}",
+        options
+    );
+
+    let mut updated_config = config.clone();
+
+    // Update each field if provided in options
+    if let Some(ref language) = options.language {
+        updated_config.language = Some(language.clone());
+    }
+
+    if let Some(translate_to_english) = options.translate_to_english {
+        updated_config.translate_to_english = translate_to_english;
+    }
+
+    if let Some(include_timestamps) = options.include_timestamps {
+        updated_config.include_timestamps = include_timestamps;
+    }
+
+    if let Some(max_tokens) = options.max_tokens {
+        updated_config.max_tokens = Some(max_tokens);
+    }
+
+    if let Some(temperature) = options.temperature {
+        updated_config.temperature = temperature;
+    }
+
+    if let Some(use_beam_search) = options.use_beam_search {
+        updated_config.use_beam_search = use_beam_search;
+    }
+
+    if let Some(beam_size) = options.beam_size {
+        updated_config.beam_size = Some(beam_size);
+    }
+
+    if let Some(suppress_blank) = options.suppress_blank {
+        updated_config.suppress_blank = suppress_blank;
+    }
+
+    if let Some(word_timestamps) = options.word_timestamps {
+        updated_config.word_timestamps = word_timestamps;
+    }
+
+    debug!("Updated transcription configuration: {:?}", updated_config);
+    info!("Updated transcription configuration: {:?}", updated_config);
+
+    updated_config
+}
 
 /// Transcription configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -93,6 +289,136 @@ impl std::fmt::Display for TranscriptionError {
 }
 
 impl std::error::Error for TranscriptionError {}
+
+/// JSON parsing and validation errors
+#[derive(Debug)]
+pub enum JsonError {
+    /// Invalid JSON format
+    InvalidJson(String),
+    /// Missing required field
+    MissingField(String),
+    /// Invalid field value
+    InvalidFieldValue(String, String),
+    /// Invalid base64 encoding
+    InvalidBase64(String),
+    /// Audio data validation failed
+    AudioDataError(String),
+}
+
+impl std::fmt::Display for JsonError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            JsonError::InvalidJson(e) => write!(f, "Invalid JSON: {}", e),
+            JsonError::MissingField(field) => write!(f, "Missing required field: {}", field),
+            JsonError::InvalidFieldValue(field, value) => {
+                write!(f, "Invalid value for field '{}': {}", field, value)
+            }
+            JsonError::InvalidBase64(e) => write!(f, "Invalid base64 encoding: {}", e),
+            JsonError::AudioDataError(e) => write!(f, "Audio data error: {}", e),
+        }
+    }
+}
+
+impl std::error::Error for JsonError {}
+
+/// Validation errors for transcription options
+#[derive(Debug)]
+pub struct ValidationError {
+    /// Field name that failed validation
+    pub field: String,
+    /// Validation error message
+    pub message: String,
+}
+
+impl ValidationError {
+    /// Create a new validation error
+    pub fn new(field: &str, message: &str) -> Self {
+        Self {
+            field: field.to_string(),
+            message: message.to_string(),
+        }
+    }
+}
+
+/// Validate transcription options
+pub fn validate_transcription_options(
+    options: &TranscriptionOptions,
+) -> Result<Vec<ValidationError>, JsonError> {
+    let mut errors = Vec::new();
+
+    // Validate language code
+    if let Some(ref lang) = options.language {
+        let valid_languages = [
+            "en", "auto", "zh", "de", "es", "ru", "ko", "fr", "ja", "pt", "tr", "pl", "ca",
+        ];
+        if !valid_languages.contains(&lang.as_str()) {
+            errors.push(ValidationError::new(
+                "language",
+                &format!(
+                    "Invalid language code: {}. Valid codes are: {:?}",
+                    lang, valid_languages
+                ),
+            ));
+        }
+    }
+
+    // Validate temperature range
+    if let Some(temperature) = options.temperature {
+        if temperature < 0.0 || temperature > 1.0 {
+            errors.push(ValidationError::new(
+                "temperature",
+                "Temperature must be between 0.0 and 1.0",
+            ));
+        }
+    }
+
+    // Validate beam size if specified
+    if let Some(beam_size) = options.beam_size {
+        if beam_size < 1 {
+            errors.push(ValidationError::new(
+                "beam_size",
+                "Beam size must be greater than 0",
+            ));
+        }
+    }
+
+    // Validate max tokens if specified
+    if let Some(max_tokens) = options.max_tokens {
+        if max_tokens == 0 {
+            errors.push(ValidationError::new(
+                "max_tokens",
+                "Max tokens must be greater than 0",
+            ));
+        }
+    }
+
+    if errors.is_empty() {
+        Ok(Vec::new())
+    } else {
+        Ok(errors)
+    }
+}
+
+/// Convert TranscriptionOptions to TranscriptionConfig
+pub fn options_to_config(options: TranscriptionOptions) -> TranscriptionConfig {
+    debug!("Converting TranscriptionOptions to TranscriptionConfig");
+    info!(
+        "Converting TranscriptionOptions to TranscriptionConfig: {:?}",
+        options
+    );
+
+    TranscriptionConfig {
+        language: options.language,
+        translate_to_english: options.translate_to_english.unwrap_or(false),
+        include_timestamps: options.include_timestamps.unwrap_or(false),
+        max_tokens: options.max_tokens,
+        temperature: options.temperature.unwrap_or(0.0),
+        use_beam_search: options.use_beam_search.unwrap_or(false),
+        beam_size: options.beam_size,
+        suppress_blank: options.suppress_blank.unwrap_or(true),
+        word_timestamps: options.word_timestamps.unwrap_or(false),
+    }
+}
 
 /// Transcription service using whisper-rs
 pub struct TranscriptionService {

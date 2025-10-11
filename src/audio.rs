@@ -1,108 +1,106 @@
+use crate::transcription;
 use log::{debug, error, info};
 use std::io;
 use tokio::io::{AsyncReadExt, stdin};
 
-/// SOT (Start of Transcription) marker sequence: null byte + 'SOT' + null byte
-const SOT_MARKER: &[u8] = b"\0SOT\0";
-
-/// Result of SOT marker detection
+/// Complete audio data received from JSON input
 #[derive(Debug, Clone)]
-pub struct SotDetectionResult {
-    /// Audio data before the SOT marker (ready for transcription)
-    pub audio_data: Vec<u8>,
-    /// Remaining buffer data after the SOT marker (to be kept for next processing)
-    pub remaining_buffer: Vec<u8>,
-    /// Whether a complete SOT marker was found
-    pub marker_found: bool,
-    /// Position where the SOT marker was found (if found)
-    pub marker_position: Option<usize>,
-}
-
-/// Audio data chunk received from stdin
-#[derive(Debug, Clone)]
-pub struct AudioChunk {
+pub struct AudioData {
     /// Raw audio data bytes
     pub data: Vec<u8>,
-    /// Sequence number for tracking order
-    pub sequence: u64,
-    /// Timestamp when chunk was received
+    /// Timestamp when data was received
     pub timestamp: std::time::Instant,
 }
 
-/// Async stdin listener for audio data
+/// JSON reader for audio data
 ///
-/// This function creates an async stream that reads audio data chunks from stdin.
-/// It handles binary data efficiently and provides proper error handling and logging.
+/// This function reads complete JSON payloads from stdin and parses them.
+/// It handles JSON validation and provides proper error handling and logging.
 ///
 /// # Arguments
-/// * `mut buffer` - Mutable reference to audio buffer
 ///
 /// # Returns
-/// * `Result<Option<AudioChunk>, io::Error>` - Audio chunk if available, None if end of stream, error if failed
-pub async fn read_audio_chunk(buffer: &mut Vec<u8>) -> Result<Option<AudioChunk>, io::Error> {
-    debug!("Starting audio chunk read operation");
+/// * `Result<Option<AudioData>, String>` - Audio data if available, None if end of stream, error if failed
+pub async fn read_json_audio() -> Result<Option<AudioData>, String> {
+    debug!("Starting JSON audio data read operation");
     let stdin = stdin();
     let mut reader = tokio::io::BufReader::new(stdin);
 
-    // Clear buffer for new data
-    buffer.clear();
-    buffer.reserve(4096); // Reserve space for efficiency
-    debug!("Audio buffer cleared and reserved space");
+    // Read complete JSON payload from stdin
+    debug!("Reading JSON payload from stdin");
+    let mut json_buffer = String::new();
 
-    // Read data into buffer
-    let mut temp_buffer = vec![0u8; 4096];
-    debug!("Reading data from stdin into buffer");
-    match reader.read(&mut temp_buffer).await {
+    match reader.read_to_string(&mut json_buffer).await {
         Ok(0) => {
             // End of stream
-            debug!("End of audio stream detected");
+            debug!("End of JSON stream detected");
             Ok(None)
         }
-        Ok(bytes_read) => {
-            debug!("Read {} bytes from stdin", bytes_read);
-            // Trim buffer to actual bytes read
-            temp_buffer.truncate(bytes_read);
+        Ok(_) => {
+            debug!("Read {} bytes from stdin", json_buffer.len());
+            info!("Read JSON payload: {} bytes", json_buffer.len());
 
-            // Create audio chunk
-            let chunk = AudioChunk {
-                data: temp_buffer,
-                sequence: 0, // This will be managed by the caller
-                timestamp: std::time::Instant::now(),
-            };
+            // Parse JSON payload
+            match serde_json::from_str::<transcription::TranscriptionRequest>(&json_buffer) {
+                Ok(request) => {
+                    debug!("Successfully parsed JSON request");
+                    info!("Successfully parsed JSON request");
 
-            // Log reception info
-            debug!("Created audio chunk with {} bytes", chunk.data.len());
-            info!("Received audio chunk: {} bytes", chunk.data.len());
+                    // Extract audio data from JSON
+                    match transcription::extract_audio_data(&request) {
+                        Ok(audio_data) => {
+                            debug!(
+                                "Successfully extracted audio data: {} bytes",
+                                audio_data.len()
+                            );
+                            info!(
+                                "Successfully extracted audio data: {} bytes",
+                                audio_data.len()
+                            );
 
-            Ok(Some(chunk))
+                            let audio = AudioData {
+                                data: audio_data,
+                                timestamp: std::time::Instant::now(),
+                            };
+
+                            Ok(Some(audio))
+                        }
+                        Err(e) => {
+                            error!("Failed to extract audio data from JSON: {}", e);
+                            Err(format!("Failed to extract audio data: {}", e))
+                        }
+                    }
+                }
+                Err(e) => {
+                    error!("Failed to parse JSON payload: {}", e);
+                    Err(format!("Invalid JSON payload: {}", e))
+                }
+            }
         }
         Err(ref e) if e.kind() == io::ErrorKind::Interrupted => {
             // Read was interrupted, try again
-            Err(io::Error::new(
-                io::ErrorKind::Interrupted,
-                "Read interrupted",
-            ))
+            Err("Read interrupted".to_string())
         }
         Err(e) => {
             // Log error and return it
             error!("Error reading from stdin: {}", e);
-            Err(e)
+            Err(format!("Error reading from stdin: {}", e))
         }
     }
 }
 
-/// Audio data processor trait for handling received chunks
+/// Audio data processor trait for handling complete audio data
 pub trait AudioProcessor: Send + Sync {
-    /// Process an audio chunk
+    /// Process complete audio data
     ///
     /// # Arguments
-    /// * `chunk` - The audio chunk to process
+    /// * `audio_data` - The complete audio data to process
     ///
     /// # Returns
     /// * `Result<(), String>` - Ok if successful, error message if failed
-    fn process_chunk(&mut self, chunk: &AudioChunk) -> Result<(), String>;
+    fn process_audio(&mut self, audio_data: &AudioData) -> Result<(), String>;
 
-    /// Check if the processor is ready to process a complete audio segment
+    /// Check if the processor is ready to process audio data
     ///
     /// # Returns
     /// * `bool` - True if ready to process, false otherwise
@@ -118,9 +116,9 @@ pub trait AudioProcessor: Send + Sync {
     fn clear_data(&mut self);
 }
 
-/// Simple audio buffer for accumulating chunks
+/// Simple audio buffer for handling complete audio data
 pub struct AudioBuffer {
-    buffer: Vec<u8>,
+    audio_data: Option<AudioData>,
     total_bytes_received: u64,
 }
 
@@ -128,27 +126,22 @@ impl AudioBuffer {
     /// Create a new audio buffer
     pub fn new() -> Self {
         Self {
-            buffer: Vec::new(),
+            audio_data: None,
             total_bytes_received: 0,
         }
     }
 
-    /// Add a chunk to the buffer
-    pub fn add_chunk(&mut self, chunk: &AudioChunk) {
-        debug!("Adding chunk with {} bytes to buffer", chunk.data.len());
-        self.buffer.extend_from_slice(&chunk.data);
-        self.total_bytes_received += chunk.data.len() as u64;
-        debug!("Total bytes received: {}", self.total_bytes_received);
-        info!(
-            "Added {} bytes to buffer (total: {})",
-            chunk.data.len(),
-            self.total_bytes_received
-        );
+    /// Set complete audio data
+    pub fn set_audio_data(&mut self, audio_data: AudioData) {
+        debug!("Setting audio data: {} bytes", audio_data.data.len());
+        self.total_bytes_received = audio_data.data.len() as u64;
+        self.audio_data = Some(audio_data);
+        info!("Set audio data: {} bytes", self.total_bytes_received);
     }
 
-    /// Get the current buffer contents
-    pub fn buffer(&self) -> &Vec<u8> {
-        &self.buffer
+    /// Get the current audio data
+    pub fn audio_data(&self) -> Option<&AudioData> {
+        self.audio_data.as_ref()
     }
 
     /// Get the total bytes received
@@ -156,130 +149,29 @@ impl AudioBuffer {
         self.total_bytes_received
     }
 
-    /// Clear the buffer
+    /// Clear the audio data
     pub fn clear(&mut self) {
-        self.buffer.clear();
+        self.audio_data = None;
         self.total_bytes_received = 0;
         info!("Audio buffer cleared");
     }
 
-    /// Check if buffer contains enough data for processing
-    pub fn has_sufficient_data(&self, min_bytes: usize) -> bool {
-        self.buffer.len() >= min_bytes
+    /// Check if buffer contains audio data for processing
+    pub fn has_audio_data(&self) -> bool {
+        self.audio_data.is_some()
     }
 
-    /// Detect SOT marker and extract audio data for transcription
-    ///
-    /// This method scans the buffer for the SOT marker sequence (\0SOT\0) and
-    /// separates the audio data into两部分: data before the marker (ready for transcription)
-    /// and remaining data after the marker (to be kept for next processing).
+    /// Take the audio data for processing
     ///
     /// # Returns
-    /// * `SotDetectionResult` containing the extracted audio data, remaining buffer,
-    ///   and detection status
-    pub fn detect_sot_marker(&self) -> SotDetectionResult {
-        debug!(
-            "Scanning for SOT marker in buffer ({} bytes)",
-            self.buffer.len()
-        );
-        info!(
-            "Scanning for SOT marker in buffer ({} bytes)",
-            self.buffer.len()
-        );
-
-        if self.buffer.len() < SOT_MARKER.len() {
-            debug!(
-                "Buffer too small to contain SOT marker (need at least {} bytes)",
-                SOT_MARKER.len()
-            );
-            info!(
-                "Buffer too small to contain SOT marker (need at least {} bytes)",
-                SOT_MARKER.len()
-            );
-            return SotDetectionResult {
-                audio_data: Vec::new(),
-                remaining_buffer: self.buffer.clone(),
-                marker_found: false,
-                marker_position: None,
-            };
+    /// * `Option<AudioData>` - Some(audio_data) if available, None otherwise
+    pub fn take_audio_data(&mut self) -> Option<AudioData> {
+        let audio_data = self.audio_data.take();
+        if audio_data.is_some() {
+            debug!("Took audio data for processing");
+            info!("Took audio data for processing");
         }
-
-        // Search for SOT marker from the end of the buffer backwards
-        // This allows us to find the last occurrence of the marker
-        debug!(
-            "Searching for SOT marker in buffer from position {}",
-            self.buffer.len() - SOT_MARKER.len()
-        );
-        for i in (0..=self.buffer.len() - SOT_MARKER.len()).rev() {
-            if &self.buffer[i..i + SOT_MARKER.len()] == SOT_MARKER {
-                let marker_position = i;
-                let audio_data = self.buffer[..marker_position].to_vec();
-                let remaining_buffer = self.buffer[marker_position + SOT_MARKER.len()..].to_vec();
-
-                debug!("SOT marker found at position {}", marker_position);
-                info!("SOT marker found at position {}", marker_position);
-                debug!("Extracted {} bytes for transcription", audio_data.len());
-                info!("Extracted {} bytes for transcription", audio_data.len());
-                debug!("Remaining buffer: {} bytes", remaining_buffer.len());
-                info!("Remaining buffer: {} bytes", remaining_buffer.len());
-
-                return SotDetectionResult {
-                    audio_data,
-                    remaining_buffer,
-                    marker_found: true,
-                    marker_position: Some(marker_position),
-                };
-            }
-        }
-
-        // SOT marker not found
-        debug!("SOT marker not found in buffer");
-        info!("SOT marker not found in buffer");
-        SotDetectionResult {
-            audio_data: Vec::new(),
-            remaining_buffer: self.buffer.clone(),
-            marker_found: false,
-            marker_position: None,
-        }
-    }
-
-    /// Process SOT marker detection and update buffer state
-    ///
-    /// This method detects the SOT marker and updates the buffer with remaining data
-    /// if a marker was found. It returns the audio data ready for transcription.
-    ///
-    /// # Returns
-    /// * `Option<Vec<u8>>` - Some(audio_data) if SOT marker found, None otherwise
-    pub fn process_sot_marker(&mut self) -> Option<Vec<u8>> {
-        let result = self.detect_sot_marker();
-
-        if result.marker_found {
-            // Update buffer with remaining data
-            self.buffer = result.remaining_buffer;
-            self.total_bytes_received = self.buffer.len() as u64;
-
-            info!("Buffer updated with {} remaining bytes", self.buffer.len());
-
-            Some(result.audio_data)
-        } else {
-            None
-        }
-    }
-
-    /// Check if buffer contains a complete SOT marker
-    ///
-    /// # Returns
-    /// * `bool` - True if SOT marker is found, false otherwise
-    pub fn has_sot_marker(&self) -> bool {
-        self.detect_sot_marker().marker_found
-    }
-
-    /// Get the minimum buffer size required to contain a SOT marker
-    ///
-    /// # Returns
-    /// * `usize` - Minimum buffer size needed
-    pub fn min_buffer_size_for_sot() -> usize {
-        SOT_MARKER.len()
+        audio_data
     }
 }
 
@@ -290,18 +182,23 @@ impl Default for AudioBuffer {
 }
 
 impl AudioProcessor for AudioBuffer {
-    fn process_chunk(&mut self, chunk: &AudioChunk) -> Result<(), String> {
-        self.add_chunk(chunk);
+    fn process_audio(&mut self, audio_data: &AudioData) -> Result<(), String> {
+        self.set_audio_data(audio_data.clone());
         Ok(())
     }
 
     fn is_ready(&self) -> bool {
-        // Check if buffer contains a SOT marker
-        self.has_sot_marker()
+        // Check if buffer contains audio data
+        self.has_audio_data()
     }
 
     fn accumulated_data(&self) -> &Vec<u8> {
-        &self.buffer
+        if let Some(ref audio_data) = self.audio_data {
+            &audio_data.data
+        } else {
+            static EMPTY_VEC: Vec<u8> = Vec::new();
+            &EMPTY_VEC
+        }
     }
 
     fn clear_data(&mut self) {
@@ -318,194 +215,80 @@ mod tests {
         let mut buffer = AudioBuffer::new();
 
         assert_eq!(buffer.total_bytes_received(), 0);
-        assert!(buffer.buffer().is_empty());
+        assert!(!buffer.has_audio_data());
 
-        let chunk = AudioChunk {
+        let audio_data = AudioData {
             data: vec![1, 2, 3, 4],
-            sequence: 0,
             timestamp: std::time::Instant::now(),
         };
 
-        buffer.add_chunk(&chunk);
+        buffer.set_audio_data(audio_data);
 
         assert_eq!(buffer.total_bytes_received(), 4);
-        assert_eq!(buffer.buffer(), &vec![1, 2, 3, 4]);
-        assert!(buffer.has_sufficient_data(2));
-        assert!(!buffer.has_sufficient_data(10));
+        assert!(buffer.has_audio_data());
+        assert_eq!(buffer.accumulated_data(), &vec![1, 2, 3, 4]);
     }
 
     #[test]
-    fn test_audio_buffer_multiple_chunks() {
+    fn test_audio_buffer_take_audio_data() {
         let mut buffer = AudioBuffer::new();
 
-        let chunk1 = AudioChunk {
-            data: vec![1, 2, 3],
-            sequence: 0,
+        let audio_data = AudioData {
+            data: vec![1, 2, 3, 4],
             timestamp: std::time::Instant::now(),
         };
 
-        let chunk2 = AudioChunk {
-            data: vec![4, 5, 6],
-            sequence: 1,
-            timestamp: std::time::Instant::now(),
-        };
+        buffer.set_audio_data(audio_data);
 
-        buffer.add_chunk(&chunk1);
-        buffer.add_chunk(&chunk2);
+        assert!(buffer.has_audio_data());
+        assert_eq!(buffer.total_bytes_received(), 4);
 
-        assert_eq!(buffer.total_bytes_received(), 6);
-        assert_eq!(buffer.buffer(), &vec![1, 2, 3, 4, 5, 6]);
+        let taken_data = buffer.take_audio_data();
+        assert!(taken_data.is_some());
+        assert_eq!(taken_data.unwrap().data, vec![1, 2, 3, 4]);
+        assert!(!buffer.has_audio_data());
+        assert_eq!(buffer.total_bytes_received(), 0);
     }
 
     #[test]
     fn test_audio_buffer_clear() {
         let mut buffer = AudioBuffer::new();
 
-        let chunk = AudioChunk {
+        let audio_data = AudioData {
             data: vec![1, 2, 3],
-            sequence: 0,
             timestamp: std::time::Instant::now(),
         };
 
-        buffer.add_chunk(&chunk);
+        buffer.set_audio_data(audio_data);
         assert_eq!(buffer.total_bytes_received(), 3);
+        assert!(buffer.has_audio_data());
 
         buffer.clear();
         assert_eq!(buffer.total_bytes_received(), 0);
-        assert!(buffer.buffer().is_empty());
+        assert!(!buffer.has_audio_data());
     }
 
     #[test]
     fn test_audio_processor_trait() {
         let mut buffer = AudioBuffer::new();
 
-        let chunk = AudioChunk {
+        let audio_data = AudioData {
             data: vec![1, 2, 3],
-            sequence: 0,
             timestamp: std::time::Instant::now(),
         };
 
         // Test AudioProcessor trait implementation
         assert!(!buffer.is_ready());
 
-        let result = buffer.process_chunk(&chunk);
+        let result = buffer.process_audio(&audio_data);
         assert!(result.is_ok());
 
-        // Should not be ready without SOT marker
-        assert!(!buffer.is_ready());
+        // Should be ready with audio data
+        assert!(buffer.is_ready());
         assert_eq!(buffer.accumulated_data(), &vec![1, 2, 3]);
 
         buffer.clear_data();
+        assert!(!buffer.is_ready());
         assert!(buffer.accumulated_data().is_empty());
-    }
-
-    #[test]
-    fn test_sot_marker_detection() {
-        let mut buffer = AudioBuffer::new();
-
-        // Test with empty buffer
-        let result = buffer.detect_sot_marker();
-        assert!(!result.marker_found);
-        assert_eq!(result.audio_data, <Vec<u8>>::new());
-        assert_eq!(result.remaining_buffer, Vec::<u8>::new());
-
-        // Test with buffer too small for SOT marker
-        buffer.buffer = vec![1, 2, 3];
-        let result = buffer.detect_sot_marker();
-        assert!(!result.marker_found);
-        assert_eq!(result.audio_data, <Vec<u8>>::new());
-        assert_eq!(result.remaining_buffer, vec![1, 2, 3]);
-
-        // Test with buffer containing SOT marker at the end
-        buffer.buffer = vec![1, 2, 3, 0, b'S', b'O', b'T', 0];
-        let result = buffer.detect_sot_marker();
-        assert!(result.marker_found);
-        assert_eq!(result.audio_data, vec![1, 2, 3]);
-        assert!(result.remaining_buffer.is_empty());
-        assert_eq!(result.marker_position, Some(3));
-
-        // Test with buffer containing SOT marker in the middle
-        buffer.buffer = vec![1, 2, 3, 0, b'S', b'O', b'T', 0, 4, 5, 6];
-        let result = buffer.detect_sot_marker();
-        assert!(result.marker_found);
-        assert_eq!(result.audio_data, vec![1, 2, 3]);
-        assert_eq!(result.remaining_buffer, vec![4, 5, 6]);
-        assert_eq!(result.marker_position, Some(3));
-
-        // Test with buffer containing multiple SOT markers (should find the last one)
-        buffer.buffer = vec![
-            1, 2, 0, b'S', b'O', b'T', 0, 3, 4, 0, b'S', b'O', b'T', 0, 5, 6,
-        ];
-        let result = buffer.detect_sot_marker();
-        assert!(result.marker_found);
-        assert_eq!(result.audio_data, vec![1, 2, 0, b'S', b'O', b'T', 0, 3, 4]);
-        assert_eq!(result.remaining_buffer, vec![5, 6]);
-        assert_eq!(result.marker_position, Some(9));
-
-        // Test with buffer that doesn't contain SOT marker
-        buffer.buffer = vec![1, 2, 3, 4, 5];
-        let result = buffer.detect_sot_marker();
-        assert!(!result.marker_found);
-        assert!(result.audio_data.is_empty());
-        assert_eq!(result.remaining_buffer, vec![1, 2, 3, 4, 5]);
-    }
-
-    #[test]
-    fn test_process_sot_marker() {
-        let mut buffer = AudioBuffer::new();
-
-        // Test with no SOT marker
-        buffer.buffer = vec![1, 2, 3, 4, 5];
-        let audio_data = buffer.process_sot_marker();
-        assert!(audio_data.is_none());
-        assert_eq!(buffer.buffer(), &vec![1, 2, 3, 4, 5]);
-
-        // Test with SOT marker
-        buffer.buffer = vec![1, 2, 3, 0, b'S', b'O', b'T', 0, 4, 5];
-        let audio_data = buffer.process_sot_marker();
-        assert!(audio_data.is_some());
-        assert_eq!(audio_data.unwrap(), vec![1, 2, 3]);
-        assert_eq!(buffer.buffer(), &vec![4, 5]);
-    }
-
-    #[test]
-    fn test_has_sot_marker() {
-        let mut buffer = AudioBuffer::new();
-
-        // Test without SOT marker
-        buffer.buffer = vec![1, 2, 3];
-        assert!(!buffer.has_sot_marker());
-
-        // Test with SOT marker
-        buffer.buffer = vec![1, 2, 3, 0, b'S', b'O', b'T', 0];
-        assert!(buffer.has_sot_marker());
-    }
-
-    #[test]
-    fn test_min_buffer_size_for_sot() {
-        assert_eq!(AudioBuffer::min_buffer_size_for_sot(), 5); // \0SOT\0 = 5 bytes
-    }
-
-    #[test]
-    fn test_sot_marker_spanning_chunk_boundaries() {
-        // Test SOT marker detection when it spans across chunk boundaries
-        let mut buffer = AudioBuffer::new();
-
-        // Add first chunk (partial SOT marker)
-        buffer.buffer.extend_from_slice(&[1, 2, 3, 0, b'S']);
-
-        // SOT marker not complete yet
-        assert!(!buffer.has_sot_marker());
-
-        // Add second chunk (completes SOT marker)
-        buffer.buffer.extend_from_slice(&[b'O', b'T', 0, 4, 5]);
-
-        // Now SOT marker should be found
-        assert!(buffer.has_sot_marker());
-
-        let result = buffer.detect_sot_marker();
-        assert!(result.marker_found);
-        assert_eq!(result.audio_data, vec![1, 2, 3]);
-        assert_eq!(result.remaining_buffer, vec![4, 5]);
     }
 }

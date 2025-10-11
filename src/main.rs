@@ -487,7 +487,7 @@ struct TranscriptionOutput {
     timestamp: Option<String>,
 }
 
-/// Process audio data from stdin using the async listener
+/// Process JSON audio data from stdin using the async listener
 ///
 /// # Arguments
 /// * `server_state` - The initialized server state
@@ -495,35 +495,28 @@ struct TranscriptionOutput {
 /// # Returns
 /// * `Result<(), String>` - Ok if successful, error message if failed
 async fn process_audio_stream(server_state: &ServerState) -> Result<(), String> {
-    info!("Starting audio processing from stdin");
+    info!("Starting JSON audio processing from stdin");
     debug!(
-        "Audio processing initialized with server state: {:?}",
+        "JSON audio processing initialized with server state: {:?}",
         server_state
     );
 
-    // Create audio buffer and temporary buffer for reading
+    // Create audio buffer for JSON processing
     let mut audio_buffer = AudioBuffer::new();
-    let mut temp_buffer = Vec::new();
-    let mut sequence = 0u64;
-    debug!("Audio buffer and temporary buffer created");
+    debug!("Audio buffer created for JSON processing");
 
-    // Process audio chunks as they arrive
-    debug!("Starting audio chunk processing loop");
+    // Process JSON audio data as it arrives
+    debug!("Starting JSON audio processing loop");
     loop {
-        debug!("Reading audio chunk, sequence number: {}", sequence);
-        match audio::read_audio_chunk(&mut temp_buffer).await {
-            Ok(Some(chunk)) => {
-                debug!("Received audio chunk: {} bytes", chunk.data.len());
+        debug!("Reading JSON audio data from stdin");
+        match audio::read_json_audio().await {
+            Ok(Some(audio_data)) => {
+                debug!("Received JSON audio data: {} bytes", audio_data.data.len());
+                info!("Received JSON audio data: {} bytes", audio_data.data.len());
 
-                // Add sequence number
-                let mut chunk = chunk;
-                chunk.sequence = sequence;
-                sequence += 1;
-                debug!("Assigned sequence number: {}", chunk.sequence);
-
-                // Add chunk to buffer
-                if let Err(e) = audio_buffer.process_chunk(&chunk) {
-                    error!("Failed to process audio chunk: {}", e);
+                // Add audio data to buffer
+                if let Err(e) = audio_buffer.process_audio(&audio_data) {
+                    error!("Failed to process audio data: {}", e);
                     continue;
                 }
 
@@ -532,22 +525,28 @@ async fn process_audio_stream(server_state: &ServerState) -> Result<(), String> 
                 info!("Buffer contains {} bytes", total_bytes);
                 debug!("Buffer status - total bytes received: {}", total_bytes);
 
-                // Check for SOT marker and process if found
+                // Check if buffer is ready and process audio data
                 if audio_buffer.is_ready() {
-                    debug!("SOT marker detected, checking buffer readiness");
-                    info!("SOT marker detected, extracting audio data for transcription");
+                    debug!("Audio buffer ready for transcription");
+                    info!("Audio buffer ready for transcription");
 
-                    // Extract audio data for transcription
-                    if let Some(audio_data) = audio_buffer.process_sot_marker() {
+                    // Take audio data for transcription
+                    if let Some(audio_data) = audio_buffer.take_audio_data() {
                         debug!(
                             "Audio data extracted for transcription: {} bytes",
-                            audio_data.len()
+                            audio_data.data.len()
                         );
-                        info!("Extracted {} bytes for transcription", audio_data.len());
+                        info!(
+                            "Extracted {} bytes for transcription",
+                            audio_data.data.len()
+                        );
 
                         // Perform transcription using the transcription service
                         debug!("Starting transcription process");
-                        match server_state.transcription_service.transcribe(&audio_data) {
+                        match server_state
+                            .transcription_service
+                            .transcribe(&audio_data.data)
+                        {
                             Ok(result) => {
                                 debug!("Transcription completed successfully");
                                 info!("Transcription completed successfully");
@@ -616,32 +615,24 @@ async fn process_audio_stream(server_state: &ServerState) -> Result<(), String> 
                                 }
                             }
                         }
-
-                        // Note: The remaining buffer data is kept in audio_buffer
-                        // for processing with the next chunk
-                    } else {
-                        warn!("SOT marker was detected but no audio data was extracted");
                     }
                 }
             }
             Ok(None) => {
-                info!("Audio stream ended");
+                debug!("No more JSON audio data to process");
+                info!("No more JSON audio data to process");
                 break;
             }
             Err(e) => {
-                error!("Error receiving audio data: {}", e);
-                if e.kind() == std::io::ErrorKind::Interrupted {
-                    // Try again on interrupt
-                    continue;
-                } else {
-                    // Break on other errors
-                    break;
-                }
+                error!("Error reading JSON audio data: {}", e);
+                // Log error to stderr
+                eprintln!("JSON audio data read error: {}", e);
+                continue;
             }
         }
     }
 
-    info!("Audio processing completed");
+    info!("JSON audio processing completed");
     Ok(())
 }
 
