@@ -256,7 +256,7 @@ pub struct TranscriptionResult {
 }
 
 /// Transcription segment with timing information
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct TranscriptionSegment {
     /// Start time in seconds
     pub start: f32,
@@ -881,5 +881,396 @@ mod tests {
         assert!(info.multilingual);
         assert!(info.has_encoder);
         assert!(info.has_decoder);
+    }
+
+    // JSON parsing and validation tests
+    #[test]
+    fn test_transcription_request_base64() {
+        let json = r#"
+        {
+            "audio_data": {
+                "data": "SGVsbG8gV29ybGQ=",
+                "format": "pcm"
+            },
+            "options": {
+                "language": "en",
+                "include_timestamps": true
+            }
+        }
+        "#;
+
+        let request: TranscriptionRequest = serde_json::from_str(json).unwrap();
+
+        match request.audio_data {
+            AudioDataFormat::Base64 { data, .. } => {
+                assert_eq!(data, "SGVsbG8gV29ybGQ=");
+            }
+            _ => panic!("Expected base64 format"),
+        }
+
+        assert_eq!(request.options.unwrap().language, Some("en".to_string()));
+    }
+
+    #[test]
+    fn test_transcription_request_binary() {
+        let json = r#"
+        {
+            "audio_data": {
+                "data": [72, 101, 108, 108, 111, 32, 87, 111, 114, 108, 100]
+            }
+        }
+        "#;
+
+        let request: TranscriptionRequest = serde_json::from_str(json).unwrap();
+
+        match request.audio_data {
+            AudioDataFormat::Binary { data, .. } => {
+                assert_eq!(
+                    data,
+                    vec![72, 101, 108, 108, 111, 32, 87, 111, 114, 108, 100]
+                );
+            }
+            _ => panic!("Expected binary format"),
+        }
+
+        assert!(request.options.is_none());
+    }
+
+    #[test]
+    fn test_transcription_request_minimal() {
+        let json = r#"
+        {
+            "audio_data": {
+                "data": "SGVsbG8gV29ybGQ="
+            }
+        }
+        "#;
+
+        let request: TranscriptionRequest = serde_json::from_str(json).unwrap();
+
+        match request.audio_data {
+            AudioDataFormat::Base64 { data, .. } => {
+                assert_eq!(data, "SGVsbG8gV29ybGQ=");
+            }
+            _ => panic!("Expected base64 format"),
+        }
+
+        assert!(request.options.is_none());
+    }
+
+    #[test]
+    fn test_transcription_request_invalid_json() {
+        let json = r#"
+        {
+            "audio_data": {
+                "data": "SGVsbG8gV29ybGQ="
+            ,
+            "options": {
+                "language": "invalid_lang"
+            }
+        }
+        "#;
+
+        let result: Result<TranscriptionRequest, _> = serde_json::from_str(json);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_transcription_request_missing_audio_data() {
+        let json = r#"
+        {
+            "options": {
+                "language": "en"
+            }
+        }
+        "#;
+
+        let result: Result<TranscriptionRequest, _> = serde_json::from_str(json);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_transcription_options_serialization() {
+        let options = TranscriptionOptions {
+            language: Some("en".to_string()),
+            translate_to_english: Some(true),
+            include_timestamps: Some(false),
+            max_tokens: Some(500),
+            temperature: Some(0.7),
+            use_beam_search: Some(true),
+            beam_size: Some(10),
+            suppress_blank: Some(false),
+            word_timestamps: Some(true),
+        };
+
+        let json = serde_json::to_string(&options).unwrap();
+        let deserialized: TranscriptionOptions = serde_json::from_str(&json).unwrap();
+
+        assert_eq!(deserialized.language, options.language);
+        assert_eq!(
+            deserialized.translate_to_english,
+            options.translate_to_english
+        );
+        assert_eq!(deserialized.include_timestamps, options.include_timestamps);
+        assert_eq!(deserialized.max_tokens, options.max_tokens);
+        assert_eq!(deserialized.temperature, options.temperature);
+        assert_eq!(deserialized.use_beam_search, options.use_beam_search);
+        assert_eq!(deserialized.beam_size, options.beam_size);
+        assert_eq!(deserialized.suppress_blank, options.suppress_blank);
+        assert_eq!(deserialized.word_timestamps, options.word_timestamps);
+    }
+
+    #[test]
+    fn test_transcription_options_default() {
+        let options = TranscriptionOptions::default();
+
+        assert!(options.language.is_none());
+        assert_eq!(options.translate_to_english, Some(false));
+        assert_eq!(options.include_timestamps, Some(true));
+        assert!(options.max_tokens.is_none());
+        assert_eq!(options.temperature, Some(0.0));
+        assert_eq!(options.use_beam_search, Some(false));
+        assert!(options.beam_size.is_none());
+        assert_eq!(options.suppress_blank, Some(true));
+        assert_eq!(options.word_timestamps, Some(false));
+    }
+
+    #[test]
+    fn test_extract_audio_data_base64() {
+        let request = TranscriptionRequest {
+            audio_data: AudioDataFormat::Base64 {
+                data: "SGVsbG8gV29ybGQ=".to_string(),
+                _format: None,
+            },
+            options: None,
+        };
+
+        let result = extract_audio_data(&request).unwrap();
+        assert_eq!(result, b"Hello World".to_vec());
+    }
+
+    #[test]
+    fn test_extract_audio_data_binary() {
+        let request = TranscriptionRequest {
+            audio_data: AudioDataFormat::Binary {
+                data: vec![72, 101, 108, 108, 111, 32, 87, 111, 114, 108, 100],
+                _format: None,
+            },
+            options: None,
+        };
+
+        let result = extract_audio_data(&request).unwrap();
+        assert_eq!(
+            result,
+            vec![72, 101, 108, 108, 111, 32, 87, 111, 114, 108, 100]
+        );
+    }
+
+    #[test]
+    fn test_extract_audio_data_empty_binary() {
+        let request = TranscriptionRequest {
+            audio_data: AudioDataFormat::Binary {
+                data: vec![],
+                _format: None,
+            },
+            options: None,
+        };
+
+        let result = extract_audio_data(&request);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("Binary audio data is empty"));
+    }
+
+    #[test]
+    fn test_extract_audio_data_invalid_base64() {
+        let request = TranscriptionRequest {
+            audio_data: AudioDataFormat::Base64 {
+                data: "invalid_base64!@#".to_string(),
+                _format: None,
+            },
+            options: None,
+        };
+
+        let result = extract_audio_data(&request);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("Failed to decode base64"));
+    }
+
+    #[test]
+    fn test_validate_transcription_options_valid() {
+        let options = TranscriptionOptions {
+            language: Some("en".to_string()),
+            temperature: Some(0.5),
+            beam_size: Some(5),
+            max_tokens: Some(100),
+            ..Default::default()
+        };
+
+        let result = validate_transcription_options(&options).unwrap();
+        assert!(result.is_empty());
+    }
+
+    #[test]
+    fn test_validate_transcription_options_invalid_language() {
+        let options = TranscriptionOptions {
+            language: Some("invalid_lang".to_string()),
+            ..Default::default()
+        };
+
+        let result = validate_transcription_options(&options).unwrap();
+        assert_eq!(result.len(), 1);
+        assert_eq!(result[0].field, "language");
+        assert!(result[0].message.contains("Invalid language code"));
+    }
+
+    #[test]
+    fn test_validate_transcription_options_invalid_temperature() {
+        let options = TranscriptionOptions {
+            temperature: Some(2.0),
+            ..Default::default()
+        };
+
+        let result = validate_transcription_options(&options).unwrap();
+        assert_eq!(result.len(), 1);
+        assert_eq!(result[0].field, "temperature");
+        assert!(result[0].message.contains("between 0.0 and 1.0"));
+    }
+
+    #[test]
+    fn test_validate_transcription_options_invalid_beam_size() {
+        let options = TranscriptionOptions {
+            beam_size: Some(0),
+            ..Default::default()
+        };
+
+        let result = validate_transcription_options(&options).unwrap();
+        assert_eq!(result.len(), 1);
+        assert_eq!(result[0].field, "beam_size");
+        assert!(result[0].message.contains("greater than 0"));
+    }
+
+    #[test]
+    fn test_validate_transcription_options_invalid_max_tokens() {
+        let options = TranscriptionOptions {
+            max_tokens: Some(0),
+            ..Default::default()
+        };
+
+        let result = validate_transcription_options(&options).unwrap();
+        assert_eq!(result.len(), 1);
+        assert_eq!(result[0].field, "max_tokens");
+        assert!(result[0].message.contains("greater than 0"));
+    }
+
+    #[test]
+    fn test_validate_transcription_options_multiple_errors() {
+        let options = TranscriptionOptions {
+            language: Some("invalid_lang".to_string()),
+            temperature: Some(2.0),
+            beam_size: Some(0),
+            max_tokens: Some(0),
+            ..Default::default()
+        };
+
+        let result = validate_transcription_options(&options).unwrap();
+        assert_eq!(result.len(), 4);
+    }
+
+    #[test]
+    fn test_options_to_config() {
+        let options = TranscriptionOptions {
+            language: Some("en".to_string()),
+            translate_to_english: Some(true),
+            include_timestamps: Some(false),
+            max_tokens: Some(500),
+            temperature: Some(0.7),
+            use_beam_search: Some(true),
+            beam_size: Some(10),
+            suppress_blank: Some(false),
+            word_timestamps: Some(true),
+        };
+
+        let config = options_to_config(options);
+
+        assert_eq!(config.language, Some("en".to_string()));
+        assert!(config.translate_to_english);
+        assert!(!config.include_timestamps);
+        assert_eq!(config.max_tokens, Some(500));
+        assert_eq!(config.temperature, 0.7);
+        assert!(config.use_beam_search);
+        assert_eq!(config.beam_size, Some(10));
+        assert!(!config.suppress_blank);
+        assert!(config.word_timestamps);
+    }
+
+    #[test]
+    fn test_update_config_from_options() {
+        let base_config = TranscriptionConfig {
+            language: Some("fr".to_string()),
+            translate_to_english: false,
+            include_timestamps: true,
+            max_tokens: None,
+            temperature: 0.0,
+            use_beam_search: false,
+            beam_size: None,
+            suppress_blank: true,
+            word_timestamps: false,
+        };
+
+        let options = TranscriptionOptions {
+            language: Some("en".to_string()),
+            translate_to_english: Some(true),
+            include_timestamps: Some(false),
+            max_tokens: Some(500),
+            temperature: Some(0.7),
+            use_beam_search: Some(true),
+            beam_size: Some(10),
+            suppress_blank: Some(false),
+            word_timestamps: Some(true),
+        };
+
+        let updated_config = update_config_from_options(&base_config, &options);
+
+        // Should update from options
+        assert_eq!(updated_config.language, Some("en".to_string()));
+        assert!(updated_config.translate_to_english);
+        assert!(!updated_config.include_timestamps);
+        assert_eq!(updated_config.max_tokens, Some(500));
+        assert_eq!(updated_config.temperature, 0.7);
+        assert!(updated_config.use_beam_search);
+        assert_eq!(updated_config.beam_size, Some(10));
+        assert!(!updated_config.suppress_blank);
+        assert!(updated_config.word_timestamps);
+    }
+
+    #[test]
+    fn test_json_error_display() {
+        let error = JsonError::InvalidJson("test error".to_string());
+        assert_eq!(format!("{}", error), "Invalid JSON: test error");
+
+        let error = JsonError::MissingField("audio_data".to_string());
+        assert_eq!(format!("{}", error), "Missing required field: audio_data");
+
+        let error = JsonError::InvalidFieldValue("language".to_string(), "invalid".to_string());
+        assert_eq!(
+            format!("{}", error),
+            "Invalid value for field 'language': invalid"
+        );
+
+        let error = JsonError::InvalidBase64("decode error".to_string());
+        assert_eq!(
+            format!("{}", error),
+            "Invalid base64 encoding: decode error"
+        );
+
+        let error = JsonError::AudioDataError("empty data".to_string());
+        assert_eq!(format!("{}", error), "Audio data error: empty data");
+    }
+
+    #[test]
+    fn test_validation_error() {
+        let error = ValidationError::new("field_name", "error message");
+        assert_eq!(error.field, "field_name");
+        assert_eq!(error.message, "error message");
     }
 }

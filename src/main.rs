@@ -862,4 +862,193 @@ mod tests {
         let result = mock_parse_arguments(args);
         assert!(result.is_err());
     }
+
+    // JSON interface tests
+    #[test]
+    fn test_server_info_serialization() {
+        let server_info = ServerInfo {
+            provider: "whisper-rs".to_string(),
+            model_name: "test-model".to_string(),
+            version: "1.0.0".to_string(),
+            attributes: ModelAttributes {
+                file_size: 1024,
+                model_type: "whisper".to_string(),
+                gpu_available: false,
+                gpu_enabled: false,
+            },
+            parameters: ServerParameters {
+                threads: Some(4),
+                cpu_only: true,
+                audio_format: "16kHz mono PCM".to_string(),
+            },
+        };
+
+        let json = serde_json::to_string(&server_info).unwrap();
+        let deserialized: ServerInfo = serde_json::from_str(&json).unwrap();
+
+        assert_eq!(deserialized.provider, server_info.provider);
+        assert_eq!(deserialized.model_name, server_info.model_name);
+        assert_eq!(deserialized.version, server_info.version);
+        assert_eq!(
+            deserialized.attributes.file_size,
+            server_info.attributes.file_size
+        );
+        assert_eq!(
+            deserialized.attributes.model_type,
+            server_info.attributes.model_type
+        );
+        assert_eq!(
+            deserialized.attributes.gpu_available,
+            server_info.attributes.gpu_available
+        );
+        assert_eq!(
+            deserialized.attributes.gpu_enabled,
+            server_info.attributes.gpu_enabled
+        );
+        assert_eq!(
+            deserialized.parameters.threads,
+            server_info.parameters.threads
+        );
+        assert_eq!(
+            deserialized.parameters.cpu_only,
+            server_info.parameters.cpu_only
+        );
+        assert_eq!(
+            deserialized.parameters.audio_format,
+            server_info.parameters.audio_format
+        );
+    }
+
+    #[test]
+    fn test_transcription_output_serialization() {
+        let output = TranscriptionOutput {
+            text: "Hello world".to_string(),
+            language: Some("en".to_string()),
+            segments: None,
+            success: true,
+            error: None,
+            duration_ms: Some(1000),
+            timestamp: Some("1234567890".to_string()),
+        };
+
+        let json = serde_json::to_string(&output).unwrap();
+        let deserialized: TranscriptionOutput = serde_json::from_str(&json).unwrap();
+
+        assert_eq!(deserialized.text, output.text);
+        assert_eq!(deserialized.language, output.language);
+        assert_eq!(deserialized.segments, output.segments);
+        assert_eq!(deserialized.success, output.success);
+        assert_eq!(deserialized.error, output.error);
+        assert_eq!(deserialized.duration_ms, output.duration_ms);
+        assert_eq!(deserialized.timestamp, output.timestamp);
+    }
+
+    #[test]
+    fn test_transcription_output_with_segments() {
+        let segments = vec![
+            transcription::TranscriptionSegment {
+                start: 0.0,
+                end: 1.0,
+                text: "Hello".to_string(),
+                confidence: Some(0.95),
+            },
+            transcription::TranscriptionSegment {
+                start: 1.0,
+                end: 2.0,
+                text: "world".to_string(),
+                confidence: Some(0.90),
+            },
+        ];
+
+        let output = TranscriptionOutput {
+            text: "Hello world".to_string(),
+            language: Some("en".to_string()),
+            segments: Some(segments.clone()),
+            success: true,
+            error: None,
+            duration_ms: Some(1000),
+            timestamp: Some("1234567890".to_string()),
+        };
+
+        let json = serde_json::to_string(&output).unwrap();
+        let deserialized: TranscriptionOutput = serde_json::from_str(&json).unwrap();
+
+        if let Some(deserialized_segments) = deserialized.segments {
+            assert_eq!(deserialized_segments.len(), segments.len());
+            assert_eq!(deserialized_segments[0].text, segments[0].text);
+            assert_eq!(deserialized_segments[1].text, segments[1].text);
+        } else {
+            panic!("Expected segments but got None");
+        }
+    }
+
+    #[test]
+    fn test_transcription_output_error_case() {
+        let output = TranscriptionOutput {
+            text: String::new(),
+            language: None,
+            segments: None,
+            success: false,
+            error: Some("Transcription failed".to_string()),
+            duration_ms: None,
+            timestamp: Some("1234567890".to_string()),
+        };
+
+        let json = serde_json::to_string(&output).unwrap();
+        let deserialized: TranscriptionOutput = serde_json::from_str(&json).unwrap();
+
+        assert!(!deserialized.success);
+        assert_eq!(deserialized.error, Some("Transcription failed".to_string()));
+        assert_eq!(deserialized.text, String::new());
+    }
+
+    #[test]
+    fn test_model_attributes_serialization() {
+        let attributes = ModelAttributes {
+            file_size: 2048,
+            model_type: "base".to_string(),
+            gpu_available: true,
+            gpu_enabled: false,
+        };
+
+        let json = serde_json::to_string(&attributes).unwrap();
+        let deserialized: ModelAttributes = serde_json::from_str(&json).unwrap();
+
+        assert_eq!(deserialized.file_size, attributes.file_size);
+        assert_eq!(deserialized.model_type, attributes.model_type);
+        assert_eq!(deserialized.gpu_available, attributes.gpu_available);
+        assert_eq!(deserialized.gpu_enabled, attributes.gpu_enabled);
+    }
+
+    #[test]
+    fn test_server_parameters_serialization() {
+        let parameters = ServerParameters {
+            threads: Some(8),
+            cpu_only: false,
+            audio_format: "16kHz mono PCM".to_string(),
+        };
+
+        let json = serde_json::to_string(&parameters).unwrap();
+        let deserialized: ServerParameters = serde_json::from_str(&json).unwrap();
+
+        assert_eq!(deserialized.threads, parameters.threads);
+        assert_eq!(deserialized.cpu_only, parameters.cpu_only);
+        assert_eq!(deserialized.audio_format, parameters.audio_format);
+    }
+
+    #[test]
+    fn test_server_parameters_default() {
+        let parameters = ServerParameters {
+            threads: None,
+            cpu_only: false,
+            audio_format: "16kHz mono PCM".to_string(),
+        };
+
+        let json = serde_json::to_string(&parameters).unwrap();
+        let deserialized: ServerParameters = serde_json::from_str(&json).unwrap();
+
+        assert_eq!(deserialized.threads, None);
+        assert_eq!(deserialized.cpu_only, false);
+        assert_eq!(deserialized.audio_format, "16kHz mono PCM".to_string());
+    }
 }

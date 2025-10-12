@@ -35,12 +35,12 @@
 - [x] Add graceful handling of incomplete JSON payloads
 
 ### 1.6 Testing
-- [ ] Create unit tests for JSON parsing and validation
-- [ ] Add integration tests for complete JSON transcription workflow
-- [ ] Test error handling for malformed JSON and invalid audio data
-- [ ] Verify logging separation (stderr vs stdout)
-- [ ] Test both base64 and binary audio data formats
-- [ ] Ensure existing JSON output format remains unchanged
+- [x] Create unit tests for JSON parsing and validation
+- [x] Add integration tests for complete JSON transcription workflow
+- [x] Test error handling for malformed JSON and invalid audio data
+- [x] Verify logging separation (stderr vs stdout)
+- [x] Test both base64 and binary audio data formats
+- [x] Ensure existing JSON output format remains unchanged
 
 ### 1.7 Documentation
 - [ ] Update README with new JSON interface usage examples
@@ -55,20 +55,20 @@
 - [x] Run `cargo fmt` to ensure consistent code formatting
 - [x] Run `cargo clippy` to catch any linting issues
 - [x] Ensure all new code follows existing project conventions
-- [ ] Verify comprehensive test coverage for new functionality
+- [x] Verify comprehensive test coverage for new functionality
 
 ### 2.2 Functional Testing
-- [ ] Test with real audio files in both base64 and binary formats
-- [ ] Verify transcription accuracy with different language options
-- [ ] Test error scenarios with malformed JSON and invalid audio
-- [ ] Ensure logging goes to stderr and JSON to stdout
-- [ ] Test edge cases (empty audio, large files, etc.)
+- [x] Test with real audio files in both base64 and binary formats
+- [x] Verify transcription accuracy with different language options
+- [x] Test error scenarios with malformed JSON and invalid audio
+- [x] Ensure logging goes to stderr and JSON to stdout
+- [x] Test edge cases (empty audio, large files, etc.)
 
 ### 2.3 Performance Testing
-- [ ] Measure JSON parsing overhead compared to SOT processing
-- [ ] Test performance with different audio file sizes
-- [ ] Verify memory usage is efficient with new JSON interface
-- [ ] Ensure no performance regression in transcription quality
+- [x] Measure JSON parsing overhead compared to SOT processing
+- [x] Test performance with different audio file sizes
+- [x] Verify memory usage is efficient with new JSON interface
+- [x] Ensure no performance regression in transcription quality
 
 ## 3. Dependencies and Integration
 

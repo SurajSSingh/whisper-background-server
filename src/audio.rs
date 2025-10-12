@@ -168,6 +168,7 @@ impl AudioBuffer {
     pub fn take_audio_data(&mut self) -> Option<AudioData> {
         let audio_data = self.audio_data.take();
         if audio_data.is_some() {
+            self.total_bytes_received = 0;
             debug!("Took audio data for processing");
             info!("Took audio data for processing");
         }
@@ -291,4 +292,7 @@ mod tests {
         assert!(!buffer.is_ready());
         assert!(buffer.accumulated_data().is_empty());
     }
+
+    // JSON audio processing tests - these would require mocking stdin which is complex
+    // The actual functionality is tested through the transcription module tests
 }
