@@ -72,6 +72,12 @@ _**NOTE: Do not include any new dependencies, but you may suggest for user to ad
 - Audio data is assumed to be 16 kHz, mono, PCM format
 - Use async when possible
 - Program arguments (options and flag) have no short variant to prevent confusion
+- When to use each logging level (recall that logs go to stderr and may be ignored by client listeners):
+  - `error!`: Issues with the app that cannot be recovered from. A client app would need to restart the server.
+  - `warn!`: Issues that can be worked around (e.g., have alternative path, use a default value, or ignore request) 
+  - `info!`: Checkpoints to know what state the app is currently in. Use to provide overview of step, not specifics.
+  - `debug!`: General messages for specific points in a step (consider this as the main alternative to `print!` or `println!`, data should be safe to ignore)
+  - `trace!`: Seldomly used, consider for frequently updating data or items which produce large amounts of data
 
 ## Common Commnads
 
@@ -88,5 +94,6 @@ _**NOTE: Do not include any new dependencies, but you may suggest for user to ad
 
 ## Additional Notes
 
-- Follow BMAD-Method (Breakthrough Method for Agile Ai Driven Development, see files in @.bmad-core)
+- Follow OpenSpec (see @/openspec)
 - Do not automatically run test
+- Do not create integration test unless explictly told by user
