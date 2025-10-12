@@ -66,10 +66,10 @@ impl Default for TranscriptionOptions {
             include_timestamps: Some(true),
             max_tokens: None,
             temperature: Some(0.0),
-            use_beam_search: Some(false),
-            beam_size: None,
+            use_beam_search: Some(true), // Changed to true to match client
+            beam_size: Some(5),          // Changed to Some(5) to match client
             suppress_blank: Some(true),
-            word_timestamps: Some(false),
+            word_timestamps: Some(false), // Matches client's word_timestamps parameter
         }
     }
 }
@@ -797,8 +797,8 @@ mod tests {
         assert!(!config.include_timestamps);
         assert!(config.max_tokens.is_none());
         assert_eq!(config.temperature, 0.0);
-        assert!(!config.use_beam_search);
-        assert!(config.beam_size.is_none());
+        assert!(!config.use_beam_search); // Note: This remains false to maintain backward compatibility
+        assert!(config.beam_size.is_none()); // Note: This remains None to maintain backward compatibility
         assert!(config.suppress_blank);
         assert!(!config.word_timestamps);
     }
@@ -1029,8 +1029,8 @@ mod tests {
         assert_eq!(options.include_timestamps, Some(true));
         assert!(options.max_tokens.is_none());
         assert_eq!(options.temperature, Some(0.0));
-        assert_eq!(options.use_beam_search, Some(false));
-        assert!(options.beam_size.is_none());
+        assert_eq!(options.use_beam_search, Some(true)); // Updated to match new default
+        assert_eq!(options.beam_size, Some(5)); // Updated to match new default
         assert_eq!(options.suppress_blank, Some(true));
         assert_eq!(options.word_timestamps, Some(false));
     }

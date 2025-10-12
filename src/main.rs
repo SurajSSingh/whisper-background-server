@@ -322,8 +322,8 @@ pub async fn initialize_server(config: Config) -> Result<ServerState, String> {
         include_timestamps: true,
         max_tokens: None,
         temperature: 0.0,
-        use_beam_search: false,
-        beam_size: None,
+        use_beam_search: true, // Updated to match new default
+        beam_size: Some(5),    // Updated to match new default
         suppress_blank: true,
         word_timestamps: false,
     };
