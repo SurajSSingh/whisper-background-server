@@ -87,19 +87,11 @@ pub fn extract_audio_data(request: &TranscriptionRequest) -> Result<Vec<u8>, Str
     match &request.audio_data {
         AudioDataFormat::Base64 { data, .. } => {
             debug!("Processing base64-encoded audio data");
-            info!(
-                "Processing base64-encoded audio data: {} characters",
-                data.len()
-            );
 
             // Decode base64 data
             match base64::engine::general_purpose::STANDARD.decode(data) {
                 Ok(decoded_data) => {
                     debug!(
-                        "Successfully decoded base64 audio data: {} bytes",
-                        decoded_data.len()
-                    );
-                    info!(
                         "Successfully decoded base64 audio data: {} bytes",
                         decoded_data.len()
                     );
@@ -112,8 +104,7 @@ pub fn extract_audio_data(request: &TranscriptionRequest) -> Result<Vec<u8>, Str
             }
         }
         AudioDataFormat::Binary { data, .. } => {
-            debug!("Processing binary audio data");
-            info!("Processing binary audio data: {} bytes", data.len());
+            debug!("Processing binary audio data: {} bytes", data.len());
 
             // Validate binary data is not empty
             if data.is_empty() {
@@ -124,10 +115,6 @@ pub fn extract_audio_data(request: &TranscriptionRequest) -> Result<Vec<u8>, Str
             // Create a copy of the binary data
             let audio_data = data.clone();
             debug!(
-                "Successfully processed binary audio data: {} bytes",
-                audio_data.len()
-            );
-            info!(
                 "Successfully processed binary audio data: {} bytes",
                 audio_data.len()
             );
@@ -149,10 +136,6 @@ pub fn update_config_from_options(
     options: &TranscriptionOptions,
 ) -> TranscriptionConfig {
     debug!("Updating transcription configuration from JSON options");
-    info!(
-        "Updating transcription configuration from JSON options: {:?}",
-        options
-    );
 
     let mut updated_config = config.clone();
 
@@ -194,7 +177,6 @@ pub fn update_config_from_options(
     }
 
     debug!("Updated transcription configuration: {:?}", updated_config);
-    info!("Updated transcription configuration: {:?}", updated_config);
 
     updated_config
 }
@@ -449,7 +431,6 @@ impl TranscriptionService {
         config: TranscriptionConfig,
     ) -> Result<Self, TranscriptionError> {
         debug!("Creating transcription service with config: {:?}", config);
-        info!("Creating transcription service with config: {:?}", config);
         Ok(Self { context, config })
     }
 
@@ -464,10 +445,6 @@ impl TranscriptionService {
         let start_time = std::time::Instant::now();
 
         debug!(
-            "Starting transcription on {} bytes of audio data",
-            audio_data.len()
-        );
-        info!(
             "Starting transcription on {} bytes of audio data",
             audio_data.len()
         );
@@ -490,17 +467,14 @@ impl TranscriptionService {
         // Set language if specified
         if let Some(ref lang) = self.config.language {
             debug!("Setting language to: {}", lang);
-            info!("Setting language to: {}", lang);
             params.set_language(Some(lang.as_str()));
         } else {
             debug!("No language specified, will auto-detect");
-            info!("No language specified, will auto-detect");
         }
 
         // Set translation to English if requested
         if self.config.translate_to_english {
             debug!("Translation to English enabled");
-            info!("Translation to English enabled");
             params.set_translate(true);
         }
 
@@ -514,7 +488,6 @@ impl TranscriptionService {
 
         // Set word timestamps if enabled
         if self.config.word_timestamps {
-            debug!("Word timestamps enabled");
             info!("Word timestamps enabled");
             params.set_no_timestamps(false);
         }
@@ -522,37 +495,25 @@ impl TranscriptionService {
         // Set max tokens if specified
         if let Some(max_tokens) = self.config.max_tokens {
             debug!("Setting max tokens to: {}", max_tokens);
-            info!("Setting max tokens to: {}", max_tokens);
             params.set_max_tokens(max_tokens as i32);
         }
 
         // Set number of threads (use system optimal if not specified)
         let num_threads = 4; // Default to 4 threads
         debug!("Using {} threads for transcription", num_threads);
-        info!("Using {} threads for transcription", num_threads);
         params.set_n_threads(num_threads as i32);
 
         // Log the parameters
         debug!("Transcription parameters:");
-        info!("Transcription parameters:");
         debug!("  Language: {:?}", self.config.language);
-        info!("  Language: {:?}", self.config.language);
         debug!(
             "  Translate to English: {}",
             self.config.translate_to_english
         );
-        info!(
-            "  Translate to English: {}",
-            self.config.translate_to_english
-        );
         debug!("  Temperature: {}", self.config.temperature);
-        info!("  Temperature: {}", self.config.temperature);
         debug!("  Beam search: {}", self.config.use_beam_search);
-        info!("  Beam search: {}", self.config.use_beam_search);
         debug!("  Suppress blank: {}", self.config.suppress_blank);
-        info!("  Suppress blank: {}", self.config.suppress_blank);
         debug!("  Word timestamps: {}", self.config.word_timestamps);
-        info!("  Word timestamps: {}", self.config.word_timestamps);
 
         debug!("Converting audio data to f32 format");
         // Convert audio data to f32 (whisper-rs expects f32 samples)
@@ -589,8 +550,7 @@ impl TranscriptionService {
         // Process the audio data
         match state.full(params, &audio_data_f32) {
             Ok(_) => {
-                debug!("Whisper processing completed successfully");
-                info!("Transcription completed successfully");
+                debug!("Transcription completed successfully");
 
                 // Extract the results
                 debug!("Extracting transcription results");
@@ -641,12 +601,11 @@ impl TranscriptionService {
             _ => "unknown",
         };
         debug!("Detected language ID: {} -> {}", lang_id, lang_code);
-        info!("Detected language: {}", lang_code);
+        debug!("Detected language: {}", lang_code);
 
         // Get the number of segments
         let num_segments = state.full_n_segments();
         debug!("Transcription produced {} segments", num_segments);
-        info!("Transcription produced {} segments", num_segments);
 
         // Extract segments if enabled
         debug!(
@@ -716,9 +675,7 @@ impl TranscriptionService {
         let duration_ms = duration.as_millis() as u64;
 
         debug!("Transcription completed in {} ms", duration_ms);
-        info!("Transcription completed in {} ms", duration_ms);
-        debug!("Transcribed text: \"{}\"", text);
-        info!("Transcribed text: {}", text);
+        debug!("Transcribed text: {}", text);
 
         Ok(TranscriptionResult {
             text,
@@ -739,7 +696,7 @@ impl TranscriptionService {
     /// # Arguments
     /// * `config` - New configuration
     pub fn update_config(&mut self, config: TranscriptionConfig) {
-        info!("Updating transcription configuration: {:?}", config);
+        debug!("Updating transcription configuration: {:?}", config);
         self.config = config;
     }
 

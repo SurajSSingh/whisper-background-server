@@ -1,5 +1,5 @@
 use crate::transcription;
-use log::{debug, error, info};
+use log::{debug, error};
 use std::io;
 use tokio::io::{AsyncReadExt, stdin};
 
@@ -38,22 +38,16 @@ pub async fn read_json_audio() -> Result<Option<AudioData>, String> {
         }
         Ok(_) => {
             debug!("Read {} bytes from stdin", json_buffer.len());
-            info!("Read JSON payload: {} bytes", json_buffer.len());
 
             // Parse JSON payload
             match serde_json::from_str::<transcription::TranscriptionRequest>(&json_buffer) {
                 Ok(request) => {
                     debug!("Successfully parsed JSON request");
-                    info!("Successfully parsed JSON request");
 
                     // Extract audio data from JSON
                     match transcription::extract_audio_data(&request) {
                         Ok(audio_data) => {
                             debug!(
-                                "Successfully extracted audio data: {} bytes",
-                                audio_data.len()
-                            );
-                            info!(
                                 "Successfully extracted audio data: {} bytes",
                                 audio_data.len()
                             );
@@ -136,7 +130,6 @@ impl AudioBuffer {
         debug!("Setting audio data: {} bytes", audio_data.data.len());
         self.total_bytes_received = audio_data.data.len() as u64;
         self.audio_data = Some(audio_data);
-        info!("Set audio data: {} bytes", self.total_bytes_received);
     }
 
     /// Get the current audio data
@@ -153,7 +146,7 @@ impl AudioBuffer {
     pub fn clear(&mut self) {
         self.audio_data = None;
         self.total_bytes_received = 0;
-        info!("Audio buffer cleared");
+        debug!("Audio buffer cleared");
     }
 
     /// Check if buffer contains audio data for processing
@@ -170,7 +163,6 @@ impl AudioBuffer {
         if audio_data.is_some() {
             self.total_bytes_received = 0;
             debug!("Took audio data for processing");
-            info!("Took audio data for processing");
         }
         audio_data
     }

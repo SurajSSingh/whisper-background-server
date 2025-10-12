@@ -4,7 +4,7 @@ use std::path::Path;
 use std::process;
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use log::{LevelFilter, debug, error, info, warn};
+use log::{LevelFilter, debug, error, info};
 use serde::{Deserialize, Serialize};
 use whisper_rs::{WhisperContext, WhisperContextParameters};
 
@@ -279,9 +279,9 @@ fn validate_model_path(model_path: &str) -> Result<(), String> {
 /// * `Result<ServerState, String>` - Initialized server state on success, error message on failure
 pub async fn initialize_server(config: Config) -> Result<ServerState, String> {
     info!("Initializing Whisper Background Server");
-    info!("Model path: {}", config.model_path);
-    info!("Threads: {:?}", config.threads);
-    info!("CPU only: {}", config.cpu_only);
+    debug!("Model path: {}", config.model_path);
+    debug!("Threads: {:?}", config.threads);
+    debug!("CPU only: {}", config.cpu_only);
 
     // Validate model path
     validate_model_path(&config.model_path)?;
@@ -424,7 +424,7 @@ fn send_server_info(server_state: &ServerState) -> Result<(), String> {
 fn send_transcription_result_json(
     result: &transcription::TranscriptionResult,
 ) -> Result<(), String> {
-    info!("Formatting transcription result as JSON for output");
+    debug!("Formatting transcription result as JSON for output");
 
     // Create a structured output object that includes all relevant fields
     let output = TranscriptionOutput {
@@ -446,13 +446,13 @@ fn send_transcription_result_json(
     // Serialize to JSON and write to stdout
     match serde_json::to_string(&output) {
         Ok(json) => {
-            info!("Successfully serialized transcription result to JSON");
+            debug!("Successfully serialized transcription result to JSON");
             println!("{}", json);
 
             // Flush stdout to ensure the output is sent immediately
             match io::stdout().flush() {
                 Ok(_) => {
-                    info!("Successfully flushed stdout after JSON output");
+                    debug!("Successfully flushed stdout after JSON output");
                     Ok(())
                 }
                 Err(e) => {
@@ -495,7 +495,7 @@ struct TranscriptionOutput {
 /// # Returns
 /// * `Result<(), String>` - Ok if successful, error message if failed
 async fn process_audio_stream(server_state: &ServerState) -> Result<(), String> {
-    info!("Starting JSON audio processing from stdin");
+    debug!("Starting JSON audio processing from stdin");
     debug!(
         "JSON audio processing initialized with server state: {:?}",
         server_state
@@ -512,7 +512,6 @@ async fn process_audio_stream(server_state: &ServerState) -> Result<(), String> 
         match audio::read_json_audio().await {
             Ok(Some(audio_data)) => {
                 debug!("Received JSON audio data: {} bytes", audio_data.data.len());
-                info!("Received JSON audio data: {} bytes", audio_data.data.len());
 
                 // Add audio data to buffer
                 if let Err(e) = audio_buffer.process_audio(&audio_data) {
@@ -522,21 +521,15 @@ async fn process_audio_stream(server_state: &ServerState) -> Result<(), String> 
 
                 // Log buffer status
                 let total_bytes = audio_buffer.total_bytes_received();
-                info!("Buffer contains {} bytes", total_bytes);
-                debug!("Buffer status - total bytes received: {}", total_bytes);
+                debug!("Buffer contains {} bytes", total_bytes);
 
                 // Check if buffer is ready and process audio data
                 if audio_buffer.is_ready() {
                     debug!("Audio buffer ready for transcription");
-                    info!("Audio buffer ready for transcription");
 
                     // Take audio data for transcription
                     if let Some(audio_data) = audio_buffer.take_audio_data() {
                         debug!(
-                            "Audio data extracted for transcription: {} bytes",
-                            audio_data.data.len()
-                        );
-                        info!(
                             "Extracted {} bytes for transcription",
                             audio_data.data.len()
                         );
@@ -549,17 +542,14 @@ async fn process_audio_stream(server_state: &ServerState) -> Result<(), String> 
                         {
                             Ok(result) => {
                                 debug!("Transcription completed successfully");
-                                info!("Transcription completed successfully");
-                                info!("Transcribed text: {}", result.text);
+                                debug!("Transcribed text: {}", result.text);
 
                                 if let Some(language) = &result.language {
                                     debug!("Detected language: {}", language);
-                                    info!("Detected language: {}", language);
                                 }
 
                                 if let Some(duration_ms) = result.duration_ms {
                                     debug!("Transcription took {} ms", duration_ms);
-                                    info!("Transcription took {} ms", duration_ms);
                                 }
 
                                 debug!("Formatting transcription result as JSON for output");
@@ -567,9 +557,6 @@ async fn process_audio_stream(server_state: &ServerState) -> Result<(), String> 
                                 match send_transcription_result_json(&result) {
                                     Ok(_) => {
                                         debug!(
-                                            "Transcription result successfully sent to stdout as JSON"
-                                        );
-                                        info!(
                                             "Transcription result successfully sent to stdout as JSON"
                                         );
                                     }
@@ -584,7 +571,6 @@ async fn process_audio_stream(server_state: &ServerState) -> Result<(), String> 
                                 }
                             }
                             Err(e) => {
-                                debug!("Transcription failed: {}", e);
                                 error!("Transcription failed: {}", e);
                                 // Log error to stderr
                                 eprintln!("Transcription error: {}", e);
@@ -603,7 +589,6 @@ async fn process_audio_stream(server_state: &ServerState) -> Result<(), String> 
                                 match send_transcription_result_json(&error_result) {
                                     Ok(_) => {
                                         debug!("Error result successfully sent to stdout as JSON");
-                                        info!("Error result successfully sent to stdout as JSON");
                                     }
                                     Err(json_error) => {
                                         error!(
@@ -620,7 +605,6 @@ async fn process_audio_stream(server_state: &ServerState) -> Result<(), String> 
             }
             Ok(None) => {
                 debug!("No more JSON audio data to process");
-                info!("No more JSON audio data to process");
                 break;
             }
             Err(e) => {
@@ -632,7 +616,7 @@ async fn process_audio_stream(server_state: &ServerState) -> Result<(), String> 
         }
     }
 
-    info!("JSON audio processing completed");
+    debug!("JSON audio processing completed");
     Ok(())
 }
 
