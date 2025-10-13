@@ -1,7 +1,7 @@
 use crate::transcription;
 use log::{debug, error};
 use std::io;
-use tokio::io::{AsyncReadExt, AsyncBufReadExt, stdin};
+use tokio::io::{AsyncBufReadExt, AsyncReadExt, stdin};
 
 /// Complete audio data received from JSON input
 #[derive(Debug, Clone)]
