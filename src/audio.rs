@@ -1,7 +1,7 @@
 use crate::transcription;
 use log::{debug, error};
 use std::io;
-use tokio::io::{AsyncBufReadExt, AsyncReadExt, stdin};
+use tokio::io::{AsyncBufReadExt, stdin};
 
 /// Complete audio data received from JSON input
 #[derive(Debug, Clone)]
@@ -9,6 +9,7 @@ pub struct AudioData {
     /// Raw audio data bytes
     pub data: Vec<u8>,
     /// Timestamp when data was received
+    #[allow(dead_code, reason = "Timestamp field kept for future logging and debugging purposes")]
     pub timestamp: std::time::Instant,
 }
 
@@ -103,9 +104,11 @@ pub trait AudioProcessor: Send + Sync {
     ///
     /// # Returns
     /// * `&Vec<u8>` - Reference to accumulated audio data
+    #[allow(dead_code, reason = "Method kept for future audio processing pipeline extensions")]
     fn accumulated_data(&self) -> &Vec<u8>;
 
     /// Clear accumulated data
+    #[allow(dead_code, reason = "Method kept for future audio processing pipeline extensions")]
     fn clear_data(&mut self);
 }
 
@@ -132,6 +135,7 @@ impl AudioBuffer {
     }
 
     /// Get the current audio data
+    #[allow(dead_code, reason = "Method kept for future audio data inspection capabilities")]
     pub fn audio_data(&self) -> Option<&AudioData> {
         self.audio_data.as_ref()
     }
@@ -142,6 +146,7 @@ impl AudioBuffer {
     }
 
     /// Clear the audio data
+    #[allow(dead_code, reason = "Method kept for future audio buffer management capabilities")]
     pub fn clear(&mut self) {
         self.audio_data = None;
         self.total_bytes_received = 0;
