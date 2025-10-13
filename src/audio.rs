@@ -1,7 +1,7 @@
 use crate::transcription;
 use log::{debug, error};
 use std::io;
-use tokio::io::{AsyncReadExt, stdin};
+use tokio::io::{AsyncReadExt, AsyncBufReadExt, stdin};
 
 /// Complete audio data received from JSON input
 #[derive(Debug, Clone)]
@@ -24,19 +24,18 @@ pub struct AudioData {
 pub async fn read_json_audio() -> Result<Option<AudioData>, String> {
     debug!("Starting JSON audio data read operation");
     let stdin = stdin();
-    let mut reader = tokio::io::BufReader::new(stdin);
+    let mut reader = tokio::io::BufReader::new(stdin).lines();
 
     // Read complete JSON payload from stdin
-    debug!("Reading JSON payload from stdin");
-    let mut json_buffer = String::new();
+    debug!("Reading JSON payload from stdin on each new line");
 
-    match reader.read_to_string(&mut json_buffer).await {
-        Ok(0) => {
+    match reader.next_line().await {
+        Ok(None) => {
             // End of stream
             debug!("End of JSON stream detected");
             Ok(None)
         }
-        Ok(_) => {
+        Ok(Some(json_buffer)) => {
             debug!("Read {} bytes from stdin", json_buffer.len());
 
             // Parse JSON payload

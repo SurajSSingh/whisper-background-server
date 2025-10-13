@@ -53,7 +53,7 @@ _**NOTE: Do not include any new dependencies, but you may suggest for user to ad
   4. Send a JSON-serializable object to Stdout with general program info (e.g., provider, model-name, version, attribute and parameters currently set) [This tells parent the programm has successfully launched]
 2. Listen on Stdin for input (consider awaiting when in async)
 3. Process input when command received:
-  1. Receive data as JSON value, containing audio data and any options
+  1. Receive data as compact (i.e., no newlines) JSON value, containing audio data and any options
   2. Apply any options to setup the transcription service
   3. Load and run full transcription on audio data using loaded model
   4. Extract textual info from transcription result, format into a JSON-serializable object
