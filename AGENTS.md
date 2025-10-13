@@ -1,3 +1,22 @@
+<!-- OPENSPEC:START -->
+# OpenSpec Instructions
+
+These instructions are for AI assistants working in this project.
+
+Always open `@/openspec/AGENTS.md` when the request:
+- Mentions planning or proposals (words like proposal, spec, change, plan)
+- Introduces new capabilities, breaking changes, architecture shifts, or big performance/security work
+- Sounds ambiguous and you need the authoritative spec before coding
+
+Use `@/openspec/AGENTS.md` to learn:
+- How to create and apply change proposals
+- Spec format and conventions
+- Project structure and guidelines
+
+Keep this managed block so 'openspec update' can refresh the instructions.
+
+<!-- OPENSPEC:END -->
+
 # Whisper Background Server Project
 
 ## Project Brief
@@ -34,8 +53,8 @@ _**NOTE: Do not include any new dependencies, but you may suggest for user to ad
   4. Send a JSON-serializable object to Stdout with general program info (e.g., provider, model-name, version, attribute and parameters currently set) [This tells parent the programm has successfully launched]
 2. Listen on Stdin for input (consider awaiting when in async)
 3. Process input when command received:
-  1. Receive audio data as chunks to a buffer, appending buffer to Vec
-  2. If extracted `\0SOT\0` bytes from the end of the buffer, put all remaining audio data before that sequence into Vec, and prepare for transcription
+  1. Receive data as compact (i.e., no newlines) JSON value, containing audio data and any options
+  2. Apply any options to setup the transcription service
   3. Load and run full transcription on audio data using loaded model
   4. Extract textual info from transcription result, format into a JSON-serializable object
   5. Send object to Stdout when finished
@@ -53,6 +72,12 @@ _**NOTE: Do not include any new dependencies, but you may suggest for user to ad
 - Audio data is assumed to be 16 kHz, mono, PCM format
 - Use async when possible
 - Program arguments (options and flag) have no short variant to prevent confusion
+- When to use each logging level (recall that logs go to stderr and may be ignored by client listeners):
+  - `error!`: Issues with the app that cannot be recovered from. A client app would need to restart the server.
+  - `warn!`: Issues that can be worked around (e.g., have alternative path, use a default value, or ignore request) 
+  - `info!`: Checkpoints to know what state the app is currently in. Use to provide overview of step, not specifics.
+  - `debug!`: General messages for specific points in a step (consider this as the main alternative to `print!` or `println!`, data should be safe to ignore)
+  - `trace!`: Seldomly used, consider for frequently updating data or items which produce large amounts of data
 
 ## Common Commnads
 
@@ -69,5 +94,6 @@ _**NOTE: Do not include any new dependencies, but you may suggest for user to ad
 
 ## Additional Notes
 
-- Follow BMAD-Method (Breakthrough Method for Agile Ai Driven Development, see files in @.bmad-core)
+- Follow OpenSpec (see @/openspec)
 - Do not automatically run test
+- Do not create integration test unless explictly told by user

@@ -4,7 +4,7 @@ use std::path::Path;
 use std::process;
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use log::{LevelFilter, debug, error, info, warn};
+use log::{LevelFilter, debug, error, info};
 use serde::{Deserialize, Serialize};
 use whisper_rs::{WhisperContext, WhisperContextParameters};
 
@@ -279,9 +279,9 @@ fn validate_model_path(model_path: &str) -> Result<(), String> {
 /// * `Result<ServerState, String>` - Initialized server state on success, error message on failure
 pub async fn initialize_server(config: Config) -> Result<ServerState, String> {
     info!("Initializing Whisper Background Server");
-    info!("Model path: {}", config.model_path);
-    info!("Threads: {:?}", config.threads);
-    info!("CPU only: {}", config.cpu_only);
+    debug!("Model path: {}", config.model_path);
+    debug!("Threads: {:?}", config.threads);
+    debug!("CPU only: {}", config.cpu_only);
 
     // Validate model path
     validate_model_path(&config.model_path)?;
@@ -322,8 +322,8 @@ pub async fn initialize_server(config: Config) -> Result<ServerState, String> {
         include_timestamps: true,
         max_tokens: None,
         temperature: 0.0,
-        use_beam_search: false,
-        beam_size: None,
+        use_beam_search: true, // Updated to match new default
+        beam_size: Some(5),    // Updated to match new default
         suppress_blank: true,
         word_timestamps: false,
     };
@@ -400,7 +400,7 @@ fn send_server_info(server_state: &ServerState) -> Result<(), String> {
             audio_format: "16kHz mono PCM".to_string(),
         },
     };
-
+    debug!("Sending server info");
     // Serialize to JSON and write to stdout
     match serde_json::to_string(&server_info) {
         Ok(json) => {
@@ -424,7 +424,7 @@ fn send_server_info(server_state: &ServerState) -> Result<(), String> {
 fn send_transcription_result_json(
     result: &transcription::TranscriptionResult,
 ) -> Result<(), String> {
-    info!("Formatting transcription result as JSON for output");
+    debug!("Formatting transcription result as JSON for output");
 
     // Create a structured output object that includes all relevant fields
     let output = TranscriptionOutput {
@@ -446,13 +446,13 @@ fn send_transcription_result_json(
     // Serialize to JSON and write to stdout
     match serde_json::to_string(&output) {
         Ok(json) => {
-            info!("Successfully serialized transcription result to JSON");
+            debug!("Successfully serialized transcription result to JSON");
             println!("{}", json);
 
             // Flush stdout to ensure the output is sent immediately
             match io::stdout().flush() {
                 Ok(_) => {
-                    info!("Successfully flushed stdout after JSON output");
+                    debug!("Successfully flushed stdout after JSON output");
                     Ok(())
                 }
                 Err(e) => {
@@ -487,7 +487,7 @@ struct TranscriptionOutput {
     timestamp: Option<String>,
 }
 
-/// Process audio data from stdin using the async listener
+/// Process JSON audio data from stdin using the async listener
 ///
 /// # Arguments
 /// * `server_state` - The initialized server state
@@ -495,72 +495,61 @@ struct TranscriptionOutput {
 /// # Returns
 /// * `Result<(), String>` - Ok if successful, error message if failed
 async fn process_audio_stream(server_state: &ServerState) -> Result<(), String> {
-    info!("Starting audio processing from stdin");
+    debug!("Starting JSON audio processing from stdin");
     debug!(
-        "Audio processing initialized with server state: {:?}",
+        "JSON audio processing initialized with server state: {:?}",
         server_state
     );
 
-    // Create audio buffer and temporary buffer for reading
+    // Create audio buffer for JSON processing
     let mut audio_buffer = AudioBuffer::new();
-    let mut temp_buffer = Vec::new();
-    let mut sequence = 0u64;
-    debug!("Audio buffer and temporary buffer created");
+    debug!("Audio buffer created for JSON processing");
 
-    // Process audio chunks as they arrive
-    debug!("Starting audio chunk processing loop");
+    // Process JSON audio data as it arrives
+    debug!("Starting JSON audio processing loop");
     loop {
-        debug!("Reading audio chunk, sequence number: {}", sequence);
-        match audio::read_audio_chunk(&mut temp_buffer).await {
-            Ok(Some(chunk)) => {
-                debug!("Received audio chunk: {} bytes", chunk.data.len());
+        debug!("Reading JSON audio data from stdin");
+        match audio::read_json_audio().await {
+            Ok(Some(audio_data)) => {
+                debug!("Received JSON audio data: {} bytes", audio_data.data.len());
 
-                // Add sequence number
-                let mut chunk = chunk;
-                chunk.sequence = sequence;
-                sequence += 1;
-                debug!("Assigned sequence number: {}", chunk.sequence);
-
-                // Add chunk to buffer
-                if let Err(e) = audio_buffer.process_chunk(&chunk) {
-                    error!("Failed to process audio chunk: {}", e);
+                // Add audio data to buffer
+                if let Err(e) = audio_buffer.process_audio(&audio_data) {
+                    error!("Failed to process audio data: {}", e);
                     continue;
                 }
 
                 // Log buffer status
                 let total_bytes = audio_buffer.total_bytes_received();
-                info!("Buffer contains {} bytes", total_bytes);
-                debug!("Buffer status - total bytes received: {}", total_bytes);
+                debug!("Buffer contains {} bytes", total_bytes);
 
-                // Check for SOT marker and process if found
+                // Check if buffer is ready and process audio data
                 if audio_buffer.is_ready() {
-                    debug!("SOT marker detected, checking buffer readiness");
-                    info!("SOT marker detected, extracting audio data for transcription");
+                    debug!("Audio buffer ready for transcription");
 
-                    // Extract audio data for transcription
-                    if let Some(audio_data) = audio_buffer.process_sot_marker() {
+                    // Take audio data for transcription
+                    if let Some(audio_data) = audio_buffer.take_audio_data() {
                         debug!(
-                            "Audio data extracted for transcription: {} bytes",
-                            audio_data.len()
+                            "Extracted {} bytes for transcription",
+                            audio_data.data.len()
                         );
-                        info!("Extracted {} bytes for transcription", audio_data.len());
 
                         // Perform transcription using the transcription service
                         debug!("Starting transcription process");
-                        match server_state.transcription_service.transcribe(&audio_data) {
+                        match server_state
+                            .transcription_service
+                            .transcribe(&audio_data.data)
+                        {
                             Ok(result) => {
                                 debug!("Transcription completed successfully");
-                                info!("Transcription completed successfully");
-                                info!("Transcribed text: {}", result.text);
+                                debug!("Transcribed text: {}", result.text);
 
                                 if let Some(language) = &result.language {
                                     debug!("Detected language: {}", language);
-                                    info!("Detected language: {}", language);
                                 }
 
                                 if let Some(duration_ms) = result.duration_ms {
                                     debug!("Transcription took {} ms", duration_ms);
-                                    info!("Transcription took {} ms", duration_ms);
                                 }
 
                                 debug!("Formatting transcription result as JSON for output");
@@ -568,9 +557,6 @@ async fn process_audio_stream(server_state: &ServerState) -> Result<(), String> 
                                 match send_transcription_result_json(&result) {
                                     Ok(_) => {
                                         debug!(
-                                            "Transcription result successfully sent to stdout as JSON"
-                                        );
-                                        info!(
                                             "Transcription result successfully sent to stdout as JSON"
                                         );
                                     }
@@ -585,7 +571,6 @@ async fn process_audio_stream(server_state: &ServerState) -> Result<(), String> 
                                 }
                             }
                             Err(e) => {
-                                debug!("Transcription failed: {}", e);
                                 error!("Transcription failed: {}", e);
                                 // Log error to stderr
                                 eprintln!("Transcription error: {}", e);
@@ -604,7 +589,6 @@ async fn process_audio_stream(server_state: &ServerState) -> Result<(), String> 
                                 match send_transcription_result_json(&error_result) {
                                     Ok(_) => {
                                         debug!("Error result successfully sent to stdout as JSON");
-                                        info!("Error result successfully sent to stdout as JSON");
                                     }
                                     Err(json_error) => {
                                         error!(
@@ -616,36 +600,28 @@ async fn process_audio_stream(server_state: &ServerState) -> Result<(), String> 
                                 }
                             }
                         }
-
-                        // Note: The remaining buffer data is kept in audio_buffer
-                        // for processing with the next chunk
-                    } else {
-                        warn!("SOT marker was detected but no audio data was extracted");
                     }
                 }
             }
             Ok(None) => {
-                info!("Audio stream ended");
+                debug!("No more JSON audio data to process");
                 break;
             }
             Err(e) => {
-                error!("Error receiving audio data: {}", e);
-                if e.kind() == std::io::ErrorKind::Interrupted {
-                    // Try again on interrupt
-                    continue;
-                } else {
-                    // Break on other errors
-                    break;
-                }
+                error!("Error reading JSON audio data: {}", e);
+                // Log error to stderr
+                eprintln!("JSON audio data read error: {}", e);
+                continue;
             }
         }
     }
 
-    info!("Audio processing completed");
+    debug!("JSON audio processing completed");
     Ok(())
 }
 
-fn main() {
+#[tokio::main]
+async fn main() {
     // Initialize logging first
     configure_logging();
     info!("Starting Whisper Background Server");
@@ -659,14 +635,12 @@ fn main() {
             eprintln!("  CPU only: {}", config.cpu_only);
 
             // Initialize server with configuration
-            let runtime = tokio::runtime::Runtime::new().expect("Failed to create tokio runtime");
-
-            match runtime.block_on(initialize_server(config)) {
+            match initialize_server(config).await {
                 Ok(server_state) => {
                     info!("Server initialized successfully, ready for audio processing");
 
                     // Start audio processing
-                    if let Err(e) = runtime.block_on(process_audio_stream(&server_state)) {
+                    if let Err(e) = process_audio_stream(&server_state).await {
                         error!("Audio processing failed: {}", e);
                         eprintln!("Error: {}", e);
                         process::exit(1);
@@ -870,5 +844,194 @@ mod tests {
 
         let result = mock_parse_arguments(args);
         assert!(result.is_err());
+    }
+
+    // JSON interface tests
+    #[test]
+    fn test_server_info_serialization() {
+        let server_info = ServerInfo {
+            provider: "whisper-rs".to_string(),
+            model_name: "test-model".to_string(),
+            version: "1.0.0".to_string(),
+            attributes: ModelAttributes {
+                file_size: 1024,
+                model_type: "whisper".to_string(),
+                gpu_available: false,
+                gpu_enabled: false,
+            },
+            parameters: ServerParameters {
+                threads: Some(4),
+                cpu_only: true,
+                audio_format: "16kHz mono PCM".to_string(),
+            },
+        };
+
+        let json = serde_json::to_string(&server_info).unwrap();
+        let deserialized: ServerInfo = serde_json::from_str(&json).unwrap();
+
+        assert_eq!(deserialized.provider, server_info.provider);
+        assert_eq!(deserialized.model_name, server_info.model_name);
+        assert_eq!(deserialized.version, server_info.version);
+        assert_eq!(
+            deserialized.attributes.file_size,
+            server_info.attributes.file_size
+        );
+        assert_eq!(
+            deserialized.attributes.model_type,
+            server_info.attributes.model_type
+        );
+        assert_eq!(
+            deserialized.attributes.gpu_available,
+            server_info.attributes.gpu_available
+        );
+        assert_eq!(
+            deserialized.attributes.gpu_enabled,
+            server_info.attributes.gpu_enabled
+        );
+        assert_eq!(
+            deserialized.parameters.threads,
+            server_info.parameters.threads
+        );
+        assert_eq!(
+            deserialized.parameters.cpu_only,
+            server_info.parameters.cpu_only
+        );
+        assert_eq!(
+            deserialized.parameters.audio_format,
+            server_info.parameters.audio_format
+        );
+    }
+
+    #[test]
+    fn test_transcription_output_serialization() {
+        let output = TranscriptionOutput {
+            text: "Hello world".to_string(),
+            language: Some("en".to_string()),
+            segments: None,
+            success: true,
+            error: None,
+            duration_ms: Some(1000),
+            timestamp: Some("1234567890".to_string()),
+        };
+
+        let json = serde_json::to_string(&output).unwrap();
+        let deserialized: TranscriptionOutput = serde_json::from_str(&json).unwrap();
+
+        assert_eq!(deserialized.text, output.text);
+        assert_eq!(deserialized.language, output.language);
+        assert_eq!(deserialized.segments, output.segments);
+        assert_eq!(deserialized.success, output.success);
+        assert_eq!(deserialized.error, output.error);
+        assert_eq!(deserialized.duration_ms, output.duration_ms);
+        assert_eq!(deserialized.timestamp, output.timestamp);
+    }
+
+    #[test]
+    fn test_transcription_output_with_segments() {
+        let segments = vec![
+            transcription::TranscriptionSegment {
+                start: 0.0,
+                end: 1.0,
+                text: "Hello".to_string(),
+                confidence: Some(0.95),
+            },
+            transcription::TranscriptionSegment {
+                start: 1.0,
+                end: 2.0,
+                text: "world".to_string(),
+                confidence: Some(0.90),
+            },
+        ];
+
+        let output = TranscriptionOutput {
+            text: "Hello world".to_string(),
+            language: Some("en".to_string()),
+            segments: Some(segments.clone()),
+            success: true,
+            error: None,
+            duration_ms: Some(1000),
+            timestamp: Some("1234567890".to_string()),
+        };
+
+        let json = serde_json::to_string(&output).unwrap();
+        let deserialized: TranscriptionOutput = serde_json::from_str(&json).unwrap();
+
+        if let Some(deserialized_segments) = deserialized.segments {
+            assert_eq!(deserialized_segments.len(), segments.len());
+            assert_eq!(deserialized_segments[0].text, segments[0].text);
+            assert_eq!(deserialized_segments[1].text, segments[1].text);
+        } else {
+            panic!("Expected segments but got None");
+        }
+    }
+
+    #[test]
+    fn test_transcription_output_error_case() {
+        let output = TranscriptionOutput {
+            text: String::new(),
+            language: None,
+            segments: None,
+            success: false,
+            error: Some("Transcription failed".to_string()),
+            duration_ms: None,
+            timestamp: Some("1234567890".to_string()),
+        };
+
+        let json = serde_json::to_string(&output).unwrap();
+        let deserialized: TranscriptionOutput = serde_json::from_str(&json).unwrap();
+
+        assert!(!deserialized.success);
+        assert_eq!(deserialized.error, Some("Transcription failed".to_string()));
+        assert_eq!(deserialized.text, String::new());
+    }
+
+    #[test]
+    fn test_model_attributes_serialization() {
+        let attributes = ModelAttributes {
+            file_size: 2048,
+            model_type: "base".to_string(),
+            gpu_available: true,
+            gpu_enabled: false,
+        };
+
+        let json = serde_json::to_string(&attributes).unwrap();
+        let deserialized: ModelAttributes = serde_json::from_str(&json).unwrap();
+
+        assert_eq!(deserialized.file_size, attributes.file_size);
+        assert_eq!(deserialized.model_type, attributes.model_type);
+        assert_eq!(deserialized.gpu_available, attributes.gpu_available);
+        assert_eq!(deserialized.gpu_enabled, attributes.gpu_enabled);
+    }
+
+    #[test]
+    fn test_server_parameters_serialization() {
+        let parameters = ServerParameters {
+            threads: Some(8),
+            cpu_only: false,
+            audio_format: "16kHz mono PCM".to_string(),
+        };
+
+        let json = serde_json::to_string(&parameters).unwrap();
+        let deserialized: ServerParameters = serde_json::from_str(&json).unwrap();
+
+        assert_eq!(deserialized.threads, parameters.threads);
+        assert_eq!(deserialized.cpu_only, parameters.cpu_only);
+        assert_eq!(deserialized.audio_format, parameters.audio_format);
+    }
+
+    #[test]
+    fn test_server_parameters_default() {
+        let parameters = ServerParameters {
+            threads: None,
+            cpu_only: false,
+            audio_format: "16kHz mono PCM".to_string(),
+        };
+
+        let json = serde_json::to_string(&parameters).unwrap();
+        let deserialized: ServerParameters = serde_json::from_str(&json).unwrap();
+
+        assert_eq!(deserialized.threads, None);
+        assert_eq!(deserialized.cpu_only, false);
+        assert_eq!(deserialized.audio_format, "16kHz mono PCM".to_string());
     }
 }
