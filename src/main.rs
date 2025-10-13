@@ -400,7 +400,7 @@ fn send_server_info(server_state: &ServerState) -> Result<(), String> {
             audio_format: "16kHz mono PCM".to_string(),
         },
     };
-
+    debug!("Sending server info");
     // Serialize to JSON and write to stdout
     match serde_json::to_string(&server_info) {
         Ok(json) => {
@@ -620,7 +620,8 @@ async fn process_audio_stream(server_state: &ServerState) -> Result<(), String> 
     Ok(())
 }
 
-fn main() {
+#[tokio::main]
+async fn main() {
     // Initialize logging first
     configure_logging();
     info!("Starting Whisper Background Server");
@@ -634,14 +635,12 @@ fn main() {
             eprintln!("  CPU only: {}", config.cpu_only);
 
             // Initialize server with configuration
-            let runtime = tokio::runtime::Runtime::new().expect("Failed to create tokio runtime");
-
-            match runtime.block_on(initialize_server(config)) {
+            match initialize_server(config).await {
                 Ok(server_state) => {
                     info!("Server initialized successfully, ready for audio processing");
 
                     // Start audio processing
-                    if let Err(e) = runtime.block_on(process_audio_stream(&server_state)) {
+                    if let Err(e) = process_audio_stream(&server_state).await {
                         error!("Audio processing failed: {}", e);
                         eprintln!("Error: {}", e);
                         process::exit(1);
