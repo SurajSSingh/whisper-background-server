@@ -131,7 +131,10 @@ pub fn extract_audio_data(request: &TranscriptionRequest) -> Result<Vec<u8>, Str
 ///
 /// # Returns
 /// * `TranscriptionConfig` - Updated configuration
-#[allow(dead_code, reason = "Function kept for future configuration management capabilities")]
+#[allow(
+    dead_code,
+    reason = "Function kept for future configuration management capabilities"
+)]
 pub fn update_config_from_options(
     config: &TranscriptionConfig,
     options: &TranscriptionOptions,
@@ -275,7 +278,10 @@ impl std::error::Error for TranscriptionError {}
 
 /// JSON parsing and validation errors
 #[derive(Debug)]
-#[allow(dead_code, reason = "Enum kept for future JSON validation error handling")]
+#[allow(
+    dead_code,
+    reason = "Enum kept for future JSON validation error handling"
+)]
 pub enum JsonError {
     /// Invalid JSON format
     InvalidJson(String),
@@ -317,7 +323,10 @@ pub struct ValidationError {
 
 impl ValidationError {
     /// Create a new validation error
-    #[allow(dead_code, reason = "Function kept for future validation error creation")]
+    #[allow(
+        dead_code,
+        reason = "Function kept for future validation error creation"
+    )]
     pub fn new(field: &str, message: &str) -> Self {
         Self {
             field: field.to_string(),
@@ -327,7 +336,10 @@ impl ValidationError {
 }
 
 /// Validate transcription options
-#[allow(dead_code, reason = "Function kept for future transcription options validation")]
+#[allow(
+    dead_code,
+    reason = "Function kept for future transcription options validation"
+)]
 pub fn validate_transcription_options(
     options: &TranscriptionOptions,
 ) -> Result<Vec<ValidationError>, JsonError> {
@@ -351,30 +363,33 @@ pub fn validate_transcription_options(
 
     // Validate temperature range
     if let Some(temperature) = options.temperature
-        && (!(0.0..=1.0).contains(&temperature)) {
-            errors.push(ValidationError::new(
-                "temperature",
-                "Temperature must be between 0.0 and 1.0",
-            ));
-        }
+        && (!(0.0..=1.0).contains(&temperature))
+    {
+        errors.push(ValidationError::new(
+            "temperature",
+            "Temperature must be between 0.0 and 1.0",
+        ));
+    }
 
     // Validate beam size if specified
     if let Some(beam_size) = options.beam_size
-        && beam_size < 1 {
-            errors.push(ValidationError::new(
-                "beam_size",
-                "Beam size must be greater than 0",
-            ));
-        }
+        && beam_size < 1
+    {
+        errors.push(ValidationError::new(
+            "beam_size",
+            "Beam size must be greater than 0",
+        ));
+    }
 
     // Validate max tokens if specified
     if let Some(max_tokens) = options.max_tokens
-        && max_tokens == 0 {
-            errors.push(ValidationError::new(
-                "max_tokens",
-                "Max tokens must be greater than 0",
-            ));
-        }
+        && max_tokens == 0
+    {
+        errors.push(ValidationError::new(
+            "max_tokens",
+            "Max tokens must be greater than 0",
+        ));
+    }
 
     if errors.is_empty() {
         Ok(Vec::new())
@@ -384,7 +399,10 @@ pub fn validate_transcription_options(
 }
 
 /// Convert TranscriptionOptions to TranscriptionConfig
-#[allow(dead_code, reason = "Function kept for future options to config conversion")]
+#[allow(
+    dead_code,
+    reason = "Function kept for future options to config conversion"
+)]
 pub fn options_to_config(options: TranscriptionOptions) -> TranscriptionConfig {
     debug!("Converting TranscriptionOptions to TranscriptionConfig");
     info!(
