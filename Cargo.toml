@@ -1,11 +1,11 @@
 [package]
 name = "whisper-background-server"
-version = "0.2.3"
+version = "0.2.4"
 edition = "2024"
 license = "Apache-2.0"
 
 [dependencies]
-whisper-rs = { version = "0.15.1", optional = true } # Optional to allow other whisper projects, but include by default
+whisper-rs = { git = "https://github.com/SurajSSingh/whisper-rs", branch="windows-fixing", optional = true } # Optional to allow other whisper projects, but include by default
 tokio = { version = "1.47.1", features = ["full"] }
 serde = { version = "1.0.226", features = ["derive"] }
 serde_json = { version = "1.0.145" }

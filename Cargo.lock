@@ -561,7 +561,7 @@ checksum = "ccf3ec651a847eb01de73ccad15eb7d99f80485de043efb2f370cd654f4ea44b"
 
 [[package]]
 name = "whisper-background-server"
-version = "0.2.2"
+version = "0.2.3"
 dependencies = [
  "base64",
  "log",
@@ -573,9 +573,8 @@ dependencies = [
 
 [[package]]
 name = "whisper-rs"
-version = "0.15.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "71ea5d2401f30f51d08126a2d133fee4c1955136519d7ac6cf6f5ac0a91e6bc8"
+version = "0.16.0"
+source = "git+https://github.com/SurajSSingh/whisper-rs?branch=windows-fixing#74e80bbcedcd2ec8bcdacc9c9a202527a62f5a6d"
 dependencies = [
  "libc",
  "log",
@@ -585,9 +584,8 @@ dependencies = [
 
 [[package]]
 name = "whisper-rs-sys"
-version = "0.14.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b5e2a6e06e7ac7b8f53c53a5f50bb0bc823ba69b63ecd887339f807a5598bbd2"
+version = "0.15.0"
+source = "git+https://github.com/SurajSSingh/whisper-rs?branch=windows-fixing#74e80bbcedcd2ec8bcdacc9c9a202527a62f5a6d"
 dependencies = [
  "bindgen",
  "cfg-if",
